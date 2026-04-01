@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>02 — Naive Bayes</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
+    --text: #1a1917; --muted: #6b6860;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+  }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; }
+  .back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
+  .back:hover { color: var(--text); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 780px; }
+  .card-header { padding: 18px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
+  .card-idx { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .card-title { font-size: 14px; font-weight: 600; flex: 1; }
+  .card-tag { font-family: var(--mono); font-size: 10px; background: #eef2e8; color: #1D6F4A; padding: 2px 8px; border-radius: 3px; }
+  .card-body { padding: 24px; overflow-x: auto; }
+
+  /* Naive Bayes component styles */
+  .nb-wrap { font-family: 'IBM Plex Sans', sans-serif; background: #fafaf8; color: #1a1a1a; padding: 20px; border-radius: 10px; border: 1px solid #e8e5de; }
+  .nb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
+  .nb-sec-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #aaa; margin: 0 0 10px; }
+  .prior-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .prior-name { font-family: 'IBM Plex Mono', monospace; font-size: 11px; width: 60px; color: #888; }
+  .bar-track { flex: 1; height: 5px; background: #ece9e2; border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .bar-pct { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #888; }
+  .word-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .word-chip { padding: 6px 14px; border-radius: 6px; border: 1px solid #d4d0c8; background: #fff; cursor: pointer; font-size: 12px; user-select: none; transition: all 0.15s; }
+  .word-chip:hover { background: #f5f3ee; }
+  .word-chip.on-spam { background: #FAECE7; border-color: #D85A30; color: #993C1D; }
+  .word-chip.on-ham  { background: #E8F5EE; border-color: #1D9E75; color: #0d6b50; }
+  .lk-table { border-collapse: collapse; font-size: 11px; width: 100%; }
+  .lk-table th { text-align: left; padding: 4px 10px 4px 0; color: #bbb; font-weight: 500; border-bottom: 1px solid #e8e5de; }
+  .lk-table td { padding: 5px 10px 5px 0; border-bottom: 1px solid #f0ede6; }
+  .math-block { font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #f0ede6; border-radius: 6px; padding: 10px; line-height: 1.8; white-space: pre; overflow-x: auto; }
+  .sc { color: #C04E2C; font-weight: 500; }
+  .hc { color: #1D6F4A; font-weight: 500; }
+  .hl { color: #1a1a1a; font-weight: 600; }
+  .nb-hint { font-size: 11px; color: #aaa; margin-top: 8px; }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Back to all visualizations</a>
+<div class="card">
+  <div class="card-header">
+    <span class="card-idx">02</span>
+    <span class="card-title">Naive Bayes — Spam Classifier</span>
+    <span class="card-tag">Module 8G</span>
+  </div>
+  <div class="card-body">
+    <div class="nb-wrap">
+      <p class="nb-sec-label">Naive Bayes — Spam detector</p>
+      <div class="nb-grid">
+        <div>
+          <p class="nb-sec-label">Prior probability</p>
+          <div class="prior-row">
+            <span class="prior-name">P(spam)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:40%;background:#D85A30"></div></div>
+            <span class="bar-pct">0.40</span>
+          </div>
+          <div class="prior-row">
+            <span class="prior-name">P(ham)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:60%;background:#1D9E75"></div></div>
+            <span class="bar-pct">0.60</span>
+          </div>
+          <p class="nb-sec-label" style="margin-top:16px">Word likelihood</p>
+          <table class="lk-table">
+            <tr><th>Word</th><th style="color:#C04E2C">P(·|spam)</th><th style="color:#1D6F4A">P(·|ham)</th></tr>
+            <tr><td>free</td><td>0.80</td><td>0.05</td></tr>
+            <tr><td>click</td><td>0.70</td><td>0.10</td></tr>
+            <tr><td>meeting</td><td>0.05</td><td>0.60</td></tr>
+            <tr><td>report</td><td>0.03</td><td>0.55</td></tr>
+          </table>
+        </div>
+        <div>
+          <p class="nb-sec-label">Select words in email</p>
+          <div class="word-chips">
+            <div class="word-chip" data-word="free">free</div>
+            <div class="word-chip" data-word="click">click</div>
+            <div class="word-chip" data-word="meeting">meeting</div>
+            <div class="word-chip" data-word="report">report</div>
+          </div>
+          <p class="nb-hint">Click words to include them</p>
+        </div>
+      </div>
+      <p class="nb-sec-label">Bayes computation</p>
+      <div class="math-block" id="nb-math">Select words above to see the computation.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const PRIOR = { spam: 0.40, ham: 0.60 };
+  const LK = {
+    free:    { spam: 0.80, ham: 0.05 },
+    click:   { spam: 0.70, ham: 0.10 },
+    meeting: { spam: 0.05, ham: 0.60 },
+    report:  { spam: 0.03, ham: 0.55 }
+  };
+  const active = new Set();
+  const mb = document.getElementById("nb-math");
+
+  function update() {
+    const words = Array.from(active);
+    if (!words.length) { mb.innerHTML = "Select words above to see the computation."; return; }
+    const raw = v => v.toFixed(4);
+    const pct = v => (v * 100).toFixed(1) + "%";
+    let s = PRIOR.spam, h = PRIOR.ham;
+    words.forEach(w => { s *= LK[w].spam; h *= LK[w].ham; });
+    const total = s + h, ps = s / total, ph = h / total;
+    const st = [PRIOR.spam.toFixed(2), ...words.map(w => LK[w].spam.toFixed(2))].join(" × ");
+    const ht = [PRIOR.ham.toFixed(2),  ...words.map(w => LK[w].ham.toFixed(2))].join(" × ");
+    mb.innerHTML =
+      `<span class="sc">score(spam)</span>  = ${st} = <span class="hl">${raw(s)}</span>\n` +
+      `<span class="hc">score(ham)</span>   = ${ht} = <span class="hl">${raw(h)}</span>\n\n` +
+      `total         = ${raw(s)} + ${raw(h)} = <span class="hl">${raw(total)}</span>\n\n` +
+      `<span class="sc">P(spam|email)</span>  = ${raw(s)} / ${raw(total)} = <span class="hl">${pct(ps)}</span>\n` +
+      `<span class="hc">P(ham|email)</span>   = ${raw(h)} / ${raw(total)} = <span class="hl">${pct(ph)}</span>`;
+  }
+
+  document.querySelectorAll(".word-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const w = chip.dataset.word;
+      if (active.has(w)) { active.delete(w); chip.classList.remove("on-spam", "on-ham"); }
+      else { active.add(w); chip.classList.add(LK[w].spam > LK[w].ham ? "on-spam" : "on-ham"); }
+      update();
+    });
+  });
+})();
+</script>
+</body>
+</html>

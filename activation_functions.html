@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>06 — Activation Functions</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
+    --text: #1a1917; --muted: #6b6860;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+  }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; }
+  .back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
+  .back:hover { color: var(--text); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 780px; }
+  .card-header { padding: 18px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
+  .card-idx { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .card-title { font-size: 14px; font-weight: 600; flex: 1; }
+  .card-tag { font-family: var(--mono); font-size: 10px; background: #eef2e8; color: #1D6F4A; padding: 2px 8px; border-radius: 3px; }
+  .card-body { padding: 24px; overflow-x: auto; }
+  .ctrl-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .ctrl-label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .btn { font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; cursor: pointer; color: #333; transition: background 0.1s; }
+  .btn:hover { background: #f0ede6; }
+  .btn.active { background: #e1f5ee; border-color: #1D9E75; color: #0f6e56; font-weight: 500; }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Back to all visualizations</a>
+<div class="card">
+  <div class="card-header">
+    <span class="card-idx">06</span>
+    <span class="card-title">Activation Functions — ReLU, Sigmoid, Tanh, Leaky ReLU</span>
+    <span class="card-tag">Module 9A</span>
+  </div>
+  <div class="card-body">
+    <div class="ctrl-row">
+      <span class="ctrl-label">Toggle:</span>
+      <button class="btn active" id="af-relu">ReLU</button>
+      <button class="btn active" id="af-sigmoid">Sigmoid</button>
+      <button class="btn active" id="af-tanh">Tanh</button>
+      <button class="btn active" id="af-leaky">Leaky ReLU</button>
+    </div>
+    <div id="af-container"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const FNS = {
+    relu:    { fn: z => Math.max(0, z),          color: "#C04E2C", label: "ReLU",       formula: "max(0, z)" },
+    sigmoid: { fn: z => 1/(1+Math.exp(-z)),       color: "#534AB7", label: "Sigmoid",    formula: "1/(1+e⁻ᶻ)" },
+    tanh:    { fn: z => Math.tanh(z),             color: "#1D6F4A", label: "Tanh",       formula: "tanh(z)" },
+    leaky:   { fn: z => z >= 0 ? z : 0.01 * z,  color: "#8B4513", label: "Leaky ReLU", formula: "max(0.01z, z)" }
+  };
+  const active = new Set(Object.keys(FNS));
+
+  const W = 680, H = 300;
+  const pad = { l: 52, r: 24, t: 24, b: 40 };
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  const xMin = -5, xMax = 5, yMin = -1.5, yMax = 1.5;
+  const cx = v => pad.l + (v - xMin) / (xMax - xMin) * cw;
+  const cy = v => pad.t + (1 - (v - yMin) / (yMax - yMin)) * ch;
+
+  const svg = d3.select("#af-container").append("svg")
+    .attr("width", W).attr("height", H)
+    .style("font-family", "IBM Plex Sans, sans-serif")
+    .style("font-size", "11px");
+
+  // Static grid
+  const gc = "#e5e5e0";
+  [-4,-3,-2,-1,0,1,2,3,4].forEach(v =>
+    svg.append("line").attr("x1",cx(v)).attr("y1",pad.t).attr("x2",cx(v)).attr("y2",pad.t+ch).attr("stroke",gc).attr("stroke-width",0.5));
+  [-1,-0.5,0,0.5,1].forEach(v =>
+    svg.append("line").attr("x1",pad.l).attr("y1",cy(v)).attr("x2",pad.l+cw).attr("y2",cy(v)).attr("stroke",gc).attr("stroke-width",0.5));
+
+  // Axes
+  svg.append("line").attr("x1",cx(0)).attr("y1",pad.t).attr("x2",cx(0)).attr("y2",pad.t+ch).attr("stroke","#bbb").attr("stroke-width",1);
+  svg.append("line").attr("x1",pad.l).attr("y1",cy(0)).attr("x2",pad.l+cw).attr("y2",cy(0)).attr("stroke","#bbb").attr("stroke-width",1);
+
+  // Tick labels
+  [-4,-2,0,2,4].forEach(v =>
+    svg.append("text").attr("x",cx(v)).attr("y",pad.t+ch+16).attr("text-anchor","middle").attr("fill","#888").text(v));
+  [-1,0,1].forEach(v =>
+    svg.append("text").attr("x",pad.l-6).attr("y",cy(v)+4).attr("text-anchor","end").attr("fill","#888").text(v));
+
+  const curvesG = svg.append("g");
+  const legendG = svg.append("g");
+
+  function draw() {
+    curvesG.selectAll("*").remove();
+    legendG.selectAll("*").remove();
+    let li = 0;
+    Object.entries(FNS).forEach(([key, { fn, color, label, formula }]) => {
+      if (!active.has(key)) return;
+      const pts = d3.range(201).map(i => {
+        const xv = xMin + (xMax - xMin) * i / 200;
+        return [cx(xv), cy(fn(xv))];
+      });
+      curvesG.append("path")
+        .attr("d", d3.line()(pts))
+        .attr("fill","none").attr("stroke",color).attr("stroke-width",2.5).attr("stroke-linecap","round");
+
+      const lx = pad.l + 10 + li * 165, ly = pad.t + 16;
+      legendG.append("line").attr("x1",lx).attr("y1",ly).attr("x2",lx+18).attr("y2",ly).attr("stroke",color).attr("stroke-width",2);
+      legendG.append("text").attr("x",lx+22).attr("y",ly+4).attr("font-size",10).attr("fill","#333").text(`${label}: ${formula}`);
+      li++;
+    });
+  }
+
+  Object.keys(FNS).forEach(key => {
+    document.getElementById(`af-${key}`).addEventListener("click", function() {
+      if (active.has(key)) { active.delete(key); this.classList.remove("active"); }
+      else { active.add(key); this.classList.add("active"); }
+      draw();
+    });
+  });
+
+  draw();
+})();
+</script>
+</body>
+</html>

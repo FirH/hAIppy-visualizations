@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>03 — Logistic Regression</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
+    --text: #1a1917; --muted: #6b6860;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+  }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; }
+  .back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
+  .back:hover { color: var(--text); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 780px; }
+  .card-header { padding: 18px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
+  .card-idx { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .card-title { font-size: 14px; font-weight: 600; flex: 1; }
+  .card-tag { font-family: var(--mono); font-size: 10px; background: #eef2e8; color: #1D6F4A; padding: 2px 8px; border-radius: 3px; }
+  .card-body { padding: 24px; overflow-x: auto; }
+  .ctrl-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .ctrl-label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  input[type="range"] { accent-color: #1D6F4A; width: 160px; }
+  .val-badge { font-family: var(--mono); font-size: 11px; background: #f0ede6; padding: 2px 8px; border-radius: 4px; min-width: 40px; text-align: center; }
+  .legend-row { display: flex; gap: 16px; margin-top: 12px; font-size: 11px; color: var(--muted); flex-wrap: wrap; align-items: center; }
+  .legend-row span { display: flex; align-items: center; gap: 5px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .leg-line { width: 16px; height: 2px; display: inline-block; }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Back to all visualizations</a>
+<div class="card">
+  <div class="card-header">
+    <span class="card-idx">03</span>
+    <span class="card-title">Logistic Regression — Sigmoid Explorer</span>
+    <span class="card-tag">Module 8C</span>
+  </div>
+  <div class="card-body">
+    <div class="ctrl-row">
+      <span class="ctrl-label">Weight w₁</span>
+      <input type="range" id="lr-w1" min="-3" max="3" step="0.1" value="1.5">
+      <span class="val-badge" id="lr-w1-val">1.5</span>
+      <span class="ctrl-label" style="margin-left:12px">Bias w₀</span>
+      <input type="range" id="lr-w0" min="-4" max="4" step="0.1" value="0">
+      <span class="val-badge" id="lr-w0-val">0.0</span>
+    </div>
+    <div id="lr-container"></div>
+    <div class="legend-row">
+      <span><span class="leg-dot" style="background:#534AB7"></span> Class 1</span>
+      <span><span class="leg-dot" style="background:#D85A30"></span> Class 0</span>
+      <span><span class="leg-line" style="background:#534AB7"></span> σ(z) curve</span>
+      <span><span class="leg-line" style="background:#D85A30"></span> Decision boundary (dashed)</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const sigmoid = z => 1 / (1 + Math.exp(-z));
+  const pts = [
+    {x:-3.2,y:0},{x:-2.8,y:1},{x:-2.5,y:0},{x:-2.1,y:0},{x:-1.9,y:0},
+    {x:-1.5,y:0},{x:-1.2,y:1},{x:-0.9,y:0},{x:-0.5,y:0},{x:-0.3,y:1},
+    {x:0.1,y:1},{x:0.4,y:0},{x:0.7,y:1},{x:1.0,y:1},{x:1.3,y:1},
+    {x:1.6,y:0},{x:1.9,y:1},{x:2.2,y:1},{x:2.6,y:1},{x:3.0,y:1}
+  ];
+
+  const width = 680, height = 280;
+  const pad = { l: 52, r: 24, t: 24, b: 40 };
+  const cw = width - pad.l - pad.r;
+  const ch = height - pad.t - pad.b;
+  const xMin = -4, xMax = 4;
+  const cx = v => pad.l + (v - xMin) / (xMax - xMin) * cw;
+  const cy = v => pad.t + (1 - v) * ch;
+
+  const svg = d3.select("#lr-container").append("svg")
+    .attr("width", width).attr("height", height)
+    .style("font-family", "IBM Plex Sans, sans-serif")
+    .style("font-size", "11px");
+
+  const gridG   = svg.append("g");
+  const curveG  = svg.append("g");
+  const boundG  = svg.append("g");
+  const ptsG    = svg.append("g");
+
+  const gc = "#e5e5e0";
+  [-4,-3,-2,-1,0,1,2,3,4].forEach(v =>
+    gridG.append("line").attr("x1",cx(v)).attr("y1",pad.t).attr("x2",cx(v)).attr("y2",pad.t+ch).attr("stroke",gc).attr("stroke-width",0.5));
+  [0,0.25,0.5,0.75,1].forEach(v =>
+    gridG.append("line").attr("x1",pad.l).attr("y1",cy(v)).attr("x2",pad.l+cw).attr("y2",cy(v)).attr("stroke",gc).attr("stroke-width",0.5));
+  gridG.append("line").attr("x1",pad.l).attr("y1",cy(0.5)).attr("x2",pad.l+cw).attr("y2",cy(0.5)).attr("stroke","#bbb").attr("stroke-width",1).attr("stroke-dasharray","5,4");
+
+  svg.append("line").attr("x1",pad.l).attr("y1",pad.t).attr("x2",pad.l).attr("y2",pad.t+ch).attr("stroke","#999").attr("stroke-width",1);
+  svg.append("line").attr("x1",pad.l).attr("y1",pad.t+ch).attr("x2",pad.l+cw).attr("y2",pad.t+ch).attr("stroke","#999").attr("stroke-width",1);
+  [-3,-2,-1,0,1,2,3].forEach(v =>
+    svg.append("text").attr("x",cx(v)).attr("y",pad.t+ch+16).attr("text-anchor","middle").attr("fill","#666").text(v));
+  [0,0.5,1].forEach(v =>
+    svg.append("text").attr("x",pad.l-6).attr("y",cy(v)+4).attr("text-anchor","end").attr("fill","#666").text(v));
+
+  function draw() {
+    const w1 = +document.getElementById("lr-w1").value;
+    const w0 = +document.getElementById("lr-w0").value;
+    document.getElementById("lr-w1-val").textContent = w1.toFixed(1);
+    document.getElementById("lr-w0-val").textContent = w0.toFixed(1);
+
+    curveG.selectAll("*").remove();
+    const cp = d3.range(201).map(i => {
+      const xv = xMin + (xMax - xMin) * i / 200;
+      return [cx(xv), cy(sigmoid(w1 * xv + w0))];
+    });
+    curveG.append("path").attr("d", d3.line()(cp))
+      .attr("fill","none").attr("stroke","#534AB7").attr("stroke-width",2.5).attr("stroke-linecap","round");
+
+    boundG.selectAll("*").remove();
+    if (Math.abs(w1) > 0.05) {
+      const xb = -w0 / w1;
+      if (xb > xMin && xb < xMax) {
+        boundG.append("line").attr("x1",cx(xb)).attr("y1",pad.t).attr("x2",cx(xb)).attr("y2",pad.t+ch)
+          .attr("stroke","#D85A30").attr("stroke-width",1.5).attr("stroke-dasharray","5,3");
+        boundG.append("text").attr("x",cx(xb)+4).attr("y",pad.t+14).attr("fill","#993C1D").attr("font-size",10).text("boundary");
+      }
+    }
+
+    ptsG.selectAll("*").remove();
+    pts.forEach(p => {
+      const py2 = cy(p.y === 1 ? 0.96 : 0.04);
+      const pred = sigmoid(w1 * p.x + w0) >= 0.5 ? 1 : 0;
+      const correct = pred === p.y;
+      const color = p.y === 1 ? "#534AB7" : "#D85A30";
+      ptsG.append("circle").attr("cx", cx(p.x)).attr("cy", py2).attr("r", 5)
+        .attr("fill", correct ? color : color + "4d")
+        .attr("stroke", color).attr("stroke-width", 1.5);
+    });
+  }
+
+  document.getElementById("lr-w1").addEventListener("input", draw);
+  document.getElementById("lr-w0").addEventListener("input", draw);
+  draw();
+})();
+</script>
+</body>
+</html>

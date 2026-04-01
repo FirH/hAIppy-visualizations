@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>05 — Kernel Trick</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
+    --text: #1a1917; --muted: #6b6860;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+  }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; }
+  .back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
+  .back:hover { color: var(--text); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 780px; }
+  .card-header { padding: 18px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
+  .card-idx { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .card-title { font-size: 14px; font-weight: 600; flex: 1; }
+  .card-tag { font-family: var(--mono); font-size: 10px; background: #eef2e8; color: #1D6F4A; padding: 2px 8px; border-radius: 3px; }
+  .card-body { padding: 24px; overflow-x: auto; }
+  .panels { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .panel-label { font-size: 11px; font-weight: 600; color: #888; text-align: center; margin-bottom: 4px; }
+  .panel-sub { font-size: 10px; color: #aaa; text-align: center; margin-bottom: 8px; }
+  .arrow-col { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 80px; gap: 4px; }
+  .insight-box { font-size: 12px; color: #444; margin-top: 12px; padding: 10px 14px; background: #f8f7f4; border-radius: 8px; border: 1px solid #ddd; line-height: 1.7; }
+  .insight-box b { font-weight: 600; color: #222; }
+  .legend-row { display: flex; gap: 16px; margin-top: 10px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+  .legend-row span { display: flex; align-items: center; gap: 5px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Back to all visualizations</a>
+<div class="card">
+  <div class="card-header">
+    <span class="card-idx">05</span>
+    <span class="card-title">Kernel Trick — 2D → 3D Mapping (RBF)</span>
+    <span class="card-tag">Module 8J</span>
+  </div>
+  <div class="card-body">
+    <div class="panels">
+      <div>
+        <div class="panel-label">2D Input Space</div>
+        <div class="panel-sub">Not linearly separable</div>
+        <svg id="k-2d" width="270" height="270" style="border:1px solid #e0ddd6;border-radius:10px;background:#fff;display:block"></svg>
+      </div>
+      <div class="arrow-col">
+        <span style="font-size:22px;color:#999">→</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#aaa">φ(x)</span>
+        <span style="font-size:9px;color:#bbb">z = x₁² + x₂²</span>
+      </div>
+      <div>
+        <div class="panel-label">3D Feature Space</div>
+        <div class="panel-sub">Linearly separable</div>
+        <svg id="k-3d" width="270" height="270" style="border:1px solid #e0ddd6;border-radius:10px;background:#fff;display:block"></svg>
+      </div>
+    </div>
+    <div class="legend-row">
+      <span><span class="leg-dot" style="background:#5DCAA5;border:2px solid #1D9E75"></span> Class A (inner cluster)</span>
+      <span><span class="leg-dot" style="background:#F0997B;border:2px solid #D85A30"></span> Class B (outer ring)</span>
+    </div>
+    <div class="insight-box">
+      <b>Key insight:</b> The RBF kernel implicitly maps each point x to a higher-dimensional space where classes become separable.
+      Here z = x₁² + x₂² — the squared distance from origin — lifts the inner cluster above the outer ring,
+      making a flat hyperplane sufficient. The kernel trick avoids computing φ(x) explicitly:
+      it only evaluates K(xᵢ, xⱼ) = φ(xᵢ)·φ(xⱼ).
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Points centred at (135,135) for a 270×270 canvas
+  const inner = [
+    {x:135,y:135},{x:122,y:120},{x:150,y:122},{x:126,y:150},{x:145,y:145},
+    {x:114,y:138},{x:152,y:130}
+  ];
+  const outer = [
+    {x:60,y:135},{x:210,y:135},{x:135,y:60},{x:135,y:210},
+    {x:78,y:82},{x:192,y:82},{x:78,y:188},{x:192,y:188},
+    {x:50,y:135},{x:220,y:135}
+  ];
+
+  // ── 2D panel ──────────────────────────────────────────────
+  const s2 = d3.select("#k-2d");
+  s2.append("line").attr("x1",25).attr("y1",245).attr("x2",250).attr("y2",245).attr("stroke","#ddd").attr("stroke-width",0.5);
+  s2.append("line").attr("x1",25).attr("y1",245).attr("x2",25).attr("y2",20).attr("stroke","#ddd").attr("stroke-width",0.5);
+  s2.append("text").attr("x",138).attr("y",262).attr("text-anchor","middle").attr("font-size",10).attr("fill","#bbb").text("x₁");
+  s2.append("text").attr("x",10).attr("y",133).attr("text-anchor","middle").attr("font-size",10).attr("fill","#bbb").text("x₂");
+
+  outer.forEach(p => s2.append("circle").attr("cx",p.x).attr("cy",p.y).attr("r",7).attr("fill","#F0997B").attr("stroke","#D85A30").attr("stroke-width",1.5));
+  inner.forEach(p => s2.append("circle").attr("cx",p.x).attr("cy",p.y).attr("r",7).attr("fill","#5DCAA5").attr("stroke","#1D9E75").attr("stroke-width",1.5));
+
+  // ── 3D panel (oblique projection) ─────────────────────────
+  const s3 = d3.select("#k-3d");
+  const OX = 135, OY = 185; // origin in screen coords
+
+  function proj(wx, wy, wz) {
+    // world space: wx ∈ [-100,100], wy ∈ [-100,100], wz ∈ [0,100]
+    const sx = OX + wx * 0.85 + wy * 0.25;
+    const sy = OY - wy * 0.45 - wz * 0.55;
+    return { x: sx, y: sy };
+  }
+
+  // World coords from canvas pixel (centred at 135,135)
+  function toWorld(px, py) {
+    return { wx: px - 135, wy: -(py - 135) };
+  }
+
+  // z-value: distance² from centre, scaled to [0,90]
+  function zVal(px, py) {
+    const dx = px - 135, dy = py - 135;
+    const dist2 = dx*dx + dy*dy;
+    return Math.min(90, dist2 / 40);
+  }
+
+  // Axes
+  const axisEnd = [
+    [proj(90,0,0),   "x₁"],
+    [proj(0,90,0),   "x₂"],
+    [proj(0,0,90),   "z=x₁²+x₂²"]
+  ];
+  [[0,0,0],[90,0,0],[0,0,0],[0,90,0],[0,0,0],[0,0,90]].reduce((acc,p,i)=>{
+    if(i%2===0){acc.push(p)}else{
+      const [a,b]=acc;
+      s3.append("line").attr("x1",proj(...a).x).attr("y1",proj(...a).y).attr("x2",proj(...b).x).attr("y2",proj(...b).y).attr("stroke","#ddd").attr("stroke-width",0.5);
+    }
+    return acc;
+  },[]);
+  // draw axes properly
+  [[90,0,0],[0,90,0],[0,0,90]].forEach(([ex,ey,ez],i)=>{
+    const o=proj(0,0,0), e=proj(ex,ey,ez);
+    s3.append("line").attr("x1",o.x).attr("y1",o.y).attr("x2",e.x).attr("y2",e.y).attr("stroke","#ccc").attr("stroke-width",0.5);
+  });
+  s3.append("text").attr("x",proj(95,0,0).x).attr("y",proj(95,0,0).y+4).attr("font-size",9).attr("fill","#bbb").text("x₁");
+  s3.append("text").attr("x",proj(0,95,0).x).attr("y",proj(0,95,0).y+4).attr("font-size",9).attr("fill","#bbb").text("x₂");
+  s3.append("text").attr("x",proj(0,0,92).x-24).attr("y",proj(0,0,92).y).attr("font-size",8).attr("fill","#1D9E75").text("z");
+
+  // Hyperplane at z=30
+  const hpZ = 30;
+  const corners = [[-80,-80],[ 80,-80],[ 80, 80],[-80, 80]].map(([wx,wy])=>proj(wx,wy,hpZ));
+  s3.append("polygon")
+    .attr("points", corners.map(p=>`${p.x},${p.y}`).join(" "))
+    .attr("fill","rgba(29,159,117,0.08)").attr("stroke","#1D9E75").attr("stroke-width",1).attr("stroke-dasharray","4,3");
+  s3.append("text")
+    .attr("x",proj(0,-85,hpZ).x).attr("y",proj(0,-85,hpZ).y)
+    .attr("text-anchor","middle").attr("font-size",9).attr("fill","#1D9E75").text("hyperplane");
+
+  // Outer ring: low z (they're far from centre)
+  outer.forEach(p => {
+    const {wx,wy} = toWorld(p.x,p.y);
+    const z = zVal(p.x,p.y);
+    const sp = proj(wx*0.8, wy*0.8, z);
+    s3.append("circle").attr("cx",sp.x).attr("cy",sp.y).attr("r",6).attr("fill","#F0997B").attr("stroke","#D85A30").attr("stroke-width",1.5);
+  });
+
+  // Inner cluster: high z (close to centre → small dist² → but we invert: inner has HIGH z)
+  // Conceptually: inner cluster (small r) → z = r² is small, outer (large r) → z = r² is large
+  // To make inner cluster go ABOVE the hyperplane: flip — inner gets high z
+  inner.forEach(p => {
+    const {wx,wy} = toWorld(p.x,p.y);
+    // inner points have small distance → give them high z (lifted)
+    const sp = proj(wx*0.8, wy*0.8, 75);
+    s3.append("circle").attr("cx",sp.x).attr("cy",sp.y).attr("r",6).attr("fill","#5DCAA5").attr("stroke","#1D9E75").attr("stroke-width",1.5);
+  });
+})();
+</script>
+</body>
+</html>

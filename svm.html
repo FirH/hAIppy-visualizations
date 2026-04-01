@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>04 — SVM Interactive</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
+    --text: #1a1917; --muted: #6b6860;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+  }
+  body { font-family: var(--sans, system-ui); background: var(--bg); color: var(--text); padding: 32px 24px; }
+  .back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
+  .back:hover { color: var(--text); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 780px; }
+  .card-header { padding: 18px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
+  .card-idx { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .card-title { font-size: 14px; font-weight: 600; flex: 1; }
+  .card-tag { font-family: var(--mono); font-size: 10px; background: #eef2e8; color: #1D6F4A; padding: 2px 8px; border-radius: 3px; }
+  .card-body { padding: 24px; overflow-x: auto; }
+
+  .ctrl-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .btn { font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; cursor: pointer; color: #333; transition: background 0.1s; }
+  .btn:hover { background: #f0ede6; }
+  .btn.active { background: #e1f5ee; border-color: #1D9E75; color: #0f6e56; font-weight: 500; }
+  .btn.active-b { background: #FAECE7; border-color: #D85A30; color: #993C1D; font-weight: 500; }
+  .btn.danger:hover { background: #FCEBEB; border-color: #E24B4A; color: #A32D2D; }
+  .sep { width: 1px; height: 20px; background: #ccc; margin: 0 2px; }
+
+  .info-box { font-size: 12px; color: #444; padding: 8px 12px; background: #f8f7f4; border-radius: 8px; border: 1px solid #e0ddd6; line-height: 1.6; margin-bottom: 14px; }
+  .info-box b { font-weight: 600; color: #111; }
+  .status-badge { display: inline-block; margin-top: 4px; font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #e1f5ee; color: #0f6e56; }
+  .status-badge.warn { background: #FAECE7; color: #993C1D; }
+
+  .legend-row { display: flex; gap: 16px; margin-top: 12px; font-size: 11px; color: var(--muted); flex-wrap: wrap; align-items: center; }
+  .legend-row span { display: flex; align-items: center; gap: 5px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← Back to all visualizations</a>
+<div class="card">
+  <div class="card-header">
+    <span class="card-idx">04</span>
+    <span class="card-title">SVM — Interactive Support Vector Picker</span>
+    <span class="card-tag">Module 8J</span>
+  </div>
+  <div class="card-body">
+    <div class="ctrl-row">
+      <button class="btn" id="svm-randA">+ random A</button>
+      <button class="btn" id="svm-randB">+ random B</button>
+      <button class="btn" id="svm-randMix">+ random mix</button>
+      <div class="sep"></div>
+      <button class="btn" id="svm-placeA">place A</button>
+      <button class="btn" id="svm-placeB">place B</button>
+      <div class="sep"></div>
+      <button class="btn" id="svm-reset">reset SVs</button>
+      <button class="btn danger" id="svm-clear">clear all</button>
+    </div>
+    <div class="info-box" id="svm-info">
+      <b>Step 1:</b> Click a <span style="color:#1D9E75;font-weight:600">teal</span> point to set it as the support vector for Class A.
+      <br><span class="status-badge" id="svm-status">No support vectors selected</span>
+    </div>
+    <svg id="svm-canvas" width="680" height="380"
+         style="display:block;border:1px solid #e0ddd6;border-radius:10px;background:#fff;cursor:default"></svg>
+    <div class="legend-row">
+      <span><span class="leg-dot" style="background:#5DCAA5;border:2px solid #1D9E75"></span> Class A</span>
+      <span><span class="leg-dot" style="background:#F0997B;border:2px solid #D85A30"></span> Class B</span>
+      <span><span class="leg-dot" style="background:#E24B4A"></span> Violation (point inside margin)</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const ns = "http://www.w3.org/2000/svg";
+  let classA = [
+    {x:90,y:200},{x:110,y:130},{x:75,y:280},{x:140,y:170},{x:60,y:160},
+    {x:130,y:260},{x:95,y:320},{x:155,y:100},{x:70,y:90},{x:160,y:230}
+  ];
+  let classB = [
+    {x:520,y:180},{x:480,y:260},{x:560,y:120},{x:500,y:310},{x:540,y:230},
+    {x:580,y:280},{x:460,y:140},{x:590,y:170},{x:510,y:80},{x:460,y:320}
+  ];
+  let svA = null, svB = null, mode = 'select';
+
+  function rand(lo, hi) { return Math.round(lo + Math.random() * (hi - lo)); }
+  function svgEl(tag, attrs) {
+    const e = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+    return e;
+  }
+
+  const canvas = document.getElementById("svm-canvas");
+  const infoEl = document.getElementById("svm-info");
+  const statusEl = document.getElementById("svm-status");
+
+  function isInsideMargin(p) {
+    if (!svA || !svB) return false;
+    const dx = svB.x - svA.x, dy = svB.y - svA.y;
+    const d = Math.sqrt(dx*dx + dy*dy) || 1;
+    const t = ((p.x - svA.x)*dx + (p.y - svA.y)*dy) / (d*d);
+    if (t <= 0 || t >= 1) return false;
+    const proj = { x: svA.x + t*dx, y: svA.y + t*dy };
+    const perpDist = Math.sqrt((p.x - proj.x)**2 + (p.y - proj.y)**2);
+    return perpDist < d / 2 * 0.9;
+  }
+
+  function render() {
+    while (canvas.firstChild) canvas.removeChild(canvas.firstChild);
+
+    if (svA && svB) {
+      const dx = svB.x - svA.x, dy = svB.y - svA.y;
+      const d = Math.sqrt(dx*dx + dy*dy) || 1;
+      const ext = 900;
+      const mx = (svA.x + svB.x) / 2, my = (svA.y + svB.y) / 2;
+
+      // Margin fill
+      const poly = svgEl("polygon", {
+        points: [
+          `${svA.x - dx/d*ext} ${svA.y - dy/d*ext}`,
+          `${svA.x + dx/d*ext} ${svA.y + dy/d*ext}`,
+          `${svB.x + dx/d*ext} ${svB.y + dy/d*ext}`,
+          `${svB.x - dx/d*ext} ${svB.y - dy/d*ext}`
+        ].join(" "),
+        fill: "rgba(29,159,117,0.06)"
+      });
+      canvas.appendChild(poly);
+
+      // Margin edge lines
+      [[svA.x, svA.y, "#1D9E75"], [svB.x, svB.y, "#D85A30"]].forEach(([px, py, col]) => {
+        canvas.appendChild(svgEl("line", {
+          x1: px - dx/d*ext, y1: py - dy/d*ext, x2: px + dx/d*ext, y2: py + dy/d*ext,
+          stroke: col, "stroke-width": 1, "stroke-dasharray": "4,3", opacity: "0.5"
+        }));
+      });
+
+      // Decision boundary
+      canvas.appendChild(svgEl("line", {
+        x1: mx - dx/d*ext, y1: my - dy/d*ext, x2: mx + dx/d*ext, y2: my + dy/d*ext,
+        stroke: "#1D6F4A", "stroke-width": 1.5, "stroke-dasharray": "6,4"
+      }));
+    }
+
+    // Points
+    const allPts = [
+      ...classA.map(p => ({...p, cls:"A"})),
+      ...classB.map(p => ({...p, cls:"B"}))
+    ];
+
+    allPts.forEach((p, i) => {
+      const isSVA = svA && p.cls==="A" && p.x===svA.x && p.y===svA.y;
+      const isSVB = svB && p.cls==="B" && p.x===svB.x && p.y===svB.y;
+      const violation = !isSVA && !isSVB && isInsideMargin(p);
+
+      const fill   = p.cls === "A" ? "#5DCAA5" : "#F0997B";
+      const stroke = p.cls === "A" ? "#1D9E75"  : "#D85A30";
+
+      if (isSVA || isSVB) {
+        canvas.appendChild(svgEl("circle", {cx:p.x, cy:p.y, r:13, fill:"none", stroke, "stroke-width":1.5, "stroke-dasharray":"3,2"}));
+        canvas.appendChild(svgEl("circle", {cx:p.x, cy:p.y, r:7, fill, stroke, "stroke-width":2.5}));
+      } else {
+        const c = svgEl("circle", {
+          cx: p.x, cy: p.y, r: 6,
+          fill: violation ? "#E24B4A" : fill,
+          stroke: violation ? "#A32D2D" : stroke,
+          "stroke-width": 1.5,
+          cursor: "pointer",
+          "data-i": i
+        });
+        c.addEventListener("click", () => onClickPt(p, p.cls));
+        canvas.appendChild(c);
+      }
+    });
+
+    // Status update
+    if (!svA || !svB) {
+      statusEl.className = "status-badge";
+      statusEl.textContent = "No support vectors selected";
+      return;
+    }
+    const violations = [...classA, ...classB].filter(p => isInsideMargin(p));
+    if (violations.length === 0) {
+      statusEl.className = "status-badge";
+      statusEl.textContent = "✓ Valid margin — no points inside";
+    } else {
+      statusEl.className = "status-badge warn";
+      statusEl.textContent = `${violations.length} violation(s) — point(s) inside margin`;
+    }
+  }
+
+  function onClickPt(p, cls) {
+    if (mode !== 'select') return;
+    if (cls === "A") {
+      svA = p;
+      infoEl.innerHTML = svB
+        ? '<b>Done!</b> Both SVs set. Try different combinations.<br><span class="status-badge" id="svm-status"></span>'
+        : '<b>Step 2:</b> Now click a <span style="color:#D85A30;font-weight:600">coral</span> point for Class B.<br><span class="status-badge" id="svm-status">No support vectors selected</span>';
+    } else {
+      svB = p;
+      infoEl.innerHTML = svA
+        ? '<b>Done!</b> Both SVs set. Try different combinations.<br><span class="status-badge" id="svm-status"></span>'
+        : '<b>Step 2:</b> Now click a <span style="color:#1D9E75;font-weight:600">teal</span> point for Class A.<br><span class="status-badge" id="svm-status">No support vectors selected</span>';
+    }
+    render();
+  }
+
+  function resetInfo() {
+    infoEl.innerHTML = '<b>Step 1:</b> Click a <span style="color:#1D9E75;font-weight:600">teal</span> point to set as support vector for Class A.<br><span class="status-badge" id="svm-status">No support vectors selected</span>';
+  }
+
+  canvas.addEventListener("click", e => {
+    if (mode === "placeA" || mode === "placeB") {
+      const r = canvas.getBoundingClientRect();
+      const pt = { x: e.clientX - r.left, y: e.clientY - r.top };
+      if (mode === "placeA") classA.push(pt); else classB.push(pt);
+      render();
+    }
+  });
+
+  function setMode(m) {
+    mode = m;
+    document.getElementById("svm-placeA").className = "btn" + (m === "placeA" ? " active" : "");
+    document.getElementById("svm-placeB").className = "btn" + (m === "placeB" ? " active-b" : "");
+    canvas.style.cursor = (m === "placeA" || m === "placeB") ? "crosshair" : "default";
+  }
+
+  document.getElementById("svm-randA").addEventListener("click", () => { for (let i=0;i<3;i++) classA.push({x:rand(40,280),y:rand(60,340)}); render(); });
+  document.getElementById("svm-randB").addEventListener("click", () => { for (let i=0;i<3;i++) classB.push({x:rand(380,640),y:rand(60,340)}); render(); });
+  document.getElementById("svm-randMix").addEventListener("click", () => { for (let i=0;i<2;i++){ classA.push({x:rand(40,280),y:rand(60,340)}); classB.push({x:rand(380,640),y:rand(60,340)}); } render(); });
+  document.getElementById("svm-placeA").addEventListener("click", () => setMode(mode === "placeA" ? "select" : "placeA"));
+  document.getElementById("svm-placeB").addEventListener("click", () => setMode(mode === "placeB" ? "select" : "placeB"));
+  document.getElementById("svm-reset").addEventListener("click", () => { svA = null; svB = null; resetInfo(); render(); });
+  document.getElementById("svm-clear").addEventListener("click", () => { classA = []; classB = []; svA = null; svB = null; resetInfo(); render(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
