@@ -9,165 +9,398 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
-    --text: #1a1917; --muted: #6b6860;
-    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+    --bg: #f7f6f2;
+    --card: #fff;
+    --border: #e2dfd6;
+    --text: #1a1917;
+    --muted: #6b6860;
+    --teal: #5DCAA5;
+    --teal-dk: #0F6E56;
+    --coral: #F0997B;
+    --coral-dk: #993C1D;
+    --green-accent: #1D9E75;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
   }
-  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; }
-  .back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px 24px;
+    min-height: 100vh;
+  }
+
+  .back {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 24px;
+    transition: color .15s;
+  }
   .back:hover { color: var(--text); }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 780px; }
-  .card-header { padding: 18px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 820px;
+  }
+
+  .card-header {
+    padding: 18px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
   .card-idx { font-family: var(--mono); font-size: 10px; color: var(--muted); }
   .card-title { font-size: 14px; font-weight: 600; flex: 1; }
-  .card-tag { font-family: var(--mono); font-size: 10px; background: #eef2e8; color: #1D6F4A; padding: 2px 8px; border-radius: 3px; }
-  .card-body { padding: 24px; overflow-x: auto; }
-  .panels { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
-  .panel-label { font-size: 11px; font-weight: 600; color: #888; text-align: center; margin-bottom: 4px; }
-  .panel-sub { font-size: 10px; color: #aaa; text-align: center; margin-bottom: 8px; }
-  .arrow-col { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 80px; gap: 4px; }
-  .insight-box { font-size: 12px; color: #444; margin-top: 12px; padding: 10px 14px; background: #f8f7f4; border-radius: 8px; border: 1px solid #ddd; line-height: 1.7; }
-  .insight-box b { font-weight: 600; color: #222; }
-  .legend-row { display: flex; gap: 16px; margin-top: 10px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+  .card-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: #eef2e8;
+    color: #1D6F4A;
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+
+  .card-body { padding: 24px; }
+
+  /* Step indicator */
+  .step-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .step-dots { display: flex; gap: 6px; }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #d3d1c7;
+    transition: background .25s;
+  }
+  .dot.active { background: var(--text); }
+  .step-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  /* Steps */
+  .step { display: none; }
+  .step.active { display: block; animation: step-in .35s ease forwards; }
+  @keyframes step-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  svg.viz {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .legend-row {
+    display: flex;
+    gap: 18px;
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
   .legend-row span { display: flex; align-items: center; gap: 5px; }
-  .leg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .leg-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  /* Nav buttons */
+  .nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 20px;
+    gap: 16px;
+  }
+  .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 7px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--bg);
+    border-color: #ccc;
+  }
+  .btn:disabled { opacity: .3; cursor: default; }
+
+  .insight-box {
+    font-size: 12px;
+    color: #444;
+    padding: 10px 14px;
+    background: #f8f7f4;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    line-height: 1.7;
+    flex: 1;
+    text-align: center;
+  }
+  .insight-box b { font-weight: 600; color: #222; }
+
+  /* Mapping arrow (visible between steps when we do side-by-side on wider screens) */
+  .phi-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    margin: 6px 0 2px;
+  }
+
+  /* Hyperplane badge */
+  .hp-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--teal-dk);
+    background: #e1f5ee;
+    border: 1px solid #9fe1cb;
+    border-radius: 4px;
+    padding: 3px 8px;
+    margin-top: 10px;
+  }
 </style>
 </head>
 <body>
-<a class="back" href="index.html">← Back to all visualizations</a>
+
 <div class="card">
   <div class="card-header">
-    <span class="card-idx">05</span>
     <span class="card-title">Kernel Trick — 2D → 3D Mapping (RBF)</span>
-    <span class="card-tag">Module 8J</span>
   </div>
+
   <div class="card-body">
-    <div class="panels">
-      <div>
-        <div class="panel-label">2D Input Space</div>
-        <div class="panel-sub">Not linearly separable</div>
-        <svg id="k-2d" width="270" height="270" style="border:1px solid #e0ddd6;border-radius:10px;background:#fff;display:block"></svg>
-      </div>
-      <div class="arrow-col">
-        <span style="font-size:22px;color:#999">→</span>
-        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#aaa">φ(x)</span>
-        <span style="font-size:9px;color:#bbb">z = x₁² + x₂²</span>
-      </div>
-      <div>
-        <div class="panel-label">3D Feature Space</div>
-        <div class="panel-sub">Linearly separable</div>
-        <svg id="k-3d" width="270" height="270" style="border:1px solid #e0ddd6;border-radius:10px;background:#fff;display:block"></svg>
+
+    <!-- Step indicator -->
+    <div class="step-nav">
+      <div class="step-dots">
+        <div class="dot active" id="dot0"></div>
+        <div class="dot" id="dot1"></div>
       </div>
     </div>
-    <div class="legend-row">
-      <span><span class="leg-dot" style="background:#5DCAA5;border:2px solid #1D9E75"></span> Class A (inner cluster)</span>
-      <span><span class="leg-dot" style="background:#F0997B;border:2px solid #D85A30"></span> Class B (outer ring)</span>
+
+    <!-- ── STEP 0: 2D ── -->
+    <div class="step active" id="step0">
+      <svg class="viz" viewBox="0 0 680 400" id="svg-2d"></svg>
+      <div class="legend-row">
+        <span><span class="leg-dot" style="background:#5DCAA5;border:2px solid #0F6E56"></span>Class A — inner cluster</span>
+        <span><span class="leg-dot" style="background:#F0997B;border:2px solid #993C1D"></span>Class B — outer ring</span>
+      </div>
     </div>
-    <div class="insight-box">
-      <b>Key insight:</b> The RBF kernel implicitly maps each point x to a higher-dimensional space where classes become separable.
-      Here z = x₁² + x₂² — the squared distance from origin — lifts the inner cluster above the outer ring,
-      making a flat hyperplane sufficient. The kernel trick avoids computing φ(x) explicitly:
-      it only evaluates K(xᵢ, xⱼ) = φ(xᵢ)·φ(xⱼ).
+
+    <!-- ── STEP 1: 3D ── -->
+    <div class="step" id="step1">
+      <svg class="viz" viewBox="0 0 680 460" id="svg-3d"></svg>
+      <div class="legend-row">
+        <span><span class="leg-dot" style="background:#5DCAA5;border:2px solid #0F6E56"></span>Class A — lifted (high z)</span>
+        <span><span class="leg-dot" style="background:#F0997B;border:2px solid #993C1D"></span>Class B — flat (low z)</span>
+      </div>
     </div>
-  </div>
-</div>
+
+    <!-- Nav -->
+    <div class="nav-row">
+      <button class="btn" id="prev-btn" onclick="navigate(-1)" disabled>← Back</button>
+      <button class="btn" id="next-btn" onclick="navigate(1)">Next →</button>
+    </div>
+
+  </div><!-- /card-body -->
+</div><!-- /card -->
 
 <script>
-(function() {
-  // Points centred at (135,135) for a 270×270 canvas
-  const inner = [
-    {x:135,y:135},{x:122,y:120},{x:150,y:122},{x:126,y:150},{x:145,y:145},
-    {x:114,y:138},{x:152,y:130}
-  ];
-  const outer = [
-    {x:60,y:135},{x:210,y:135},{x:135,y:60},{x:135,y:210},
-    {x:78,y:82},{x:192,y:82},{x:78,y:188},{x:192,y:188},
-    {x:50,y:135},{x:220,y:135}
-  ];
+// ─── attrs polyfill — must be first ───────────────────────────────────────────
+d3.selection.prototype.attrs = function(map) {
+  for (const [k, v] of Object.entries(map)) this.attr(k, v);
+  return this;
+};
 
-  // ── 2D panel ──────────────────────────────────────────────
-  const s2 = d3.select("#k-2d");
-  s2.append("line").attr("x1",25).attr("y1",245).attr("x2",250).attr("y2",245).attr("stroke","#ddd").attr("stroke-width",0.5);
-  s2.append("line").attr("x1",25).attr("y1",245).attr("x2",25).attr("y2",20).attr("stroke","#ddd").attr("stroke-width",0.5);
-  s2.append("text").attr("x",138).attr("y",262).attr("text-anchor","middle").attr("font-size",10).attr("fill","#bbb").text("x₁");
-  s2.append("text").attr("x",10).attr("y",133).attr("text-anchor","middle").attr("font-size",10).attr("fill","#bbb").text("x₂");
+// ─── Data ─────────────────────────────────────────────────────────────────────
+// Inner cluster — small radius from centre (0,0)
+const inner2D = [
+  {x:340,y:190},{x:312,y:165},{x:368,y:168},
+  {x:318,y:215},{x:360,y:210},{x:297,y:192},{x:376,y:182}
+];
+// Outer ring — large radius
+const outer2D = [
+  {x:130,y:190},{x:550,y:190},{x:340,y:58},{x:340,y:315},
+  {x:188,y:108},{x:490,y:108},{x:188,y:272},{x:490,y:272},
+  {x:108,y:190},{x:568,y:190}
+];
 
-  outer.forEach(p => s2.append("circle").attr("cx",p.x).attr("cy",p.y).attr("r",7).attr("fill","#F0997B").attr("stroke","#D85A30").attr("stroke-width",1.5));
-  inner.forEach(p => s2.append("circle").attr("cx",p.x).attr("cy",p.y).attr("r",7).attr("fill","#5DCAA5").attr("stroke","#1D9E75").attr("stroke-width",1.5));
-
-  // ── 3D panel (oblique projection) ─────────────────────────
-  const s3 = d3.select("#k-3d");
-  const OX = 135, OY = 185; // origin in screen coords
-
-  function proj(wx, wy, wz) {
-    // world space: wx ∈ [-100,100], wy ∈ [-100,100], wz ∈ [0,100]
-    const sx = OX + wx * 0.85 + wy * 0.25;
-    const sy = OY - wy * 0.45 - wz * 0.55;
-    return { x: sx, y: sy };
-  }
-
-  // World coords from canvas pixel (centred at 135,135)
-  function toWorld(px, py) {
-    return { wx: px - 135, wy: -(py - 135) };
-  }
-
-  // z-value: distance² from centre, scaled to [0,90]
-  function zVal(px, py) {
-    const dx = px - 135, dy = py - 135;
-    const dist2 = dx*dx + dy*dy;
-    return Math.min(90, dist2 / 40);
-  }
+// ─── 2D Panel ─────────────────────────────────────────────────────────────────
+(function build2D() {
+  const s = d3.select('#svg-2d');
 
   // Axes
-  const axisEnd = [
-    [proj(90,0,0),   "x₁"],
-    [proj(0,90,0),   "x₂"],
-    [proj(0,0,90),   "z=x₁²+x₂²"]
-  ];
-  [[0,0,0],[90,0,0],[0,0,0],[0,90,0],[0,0,0],[0,0,90]].reduce((acc,p,i)=>{
-    if(i%2===0){acc.push(p)}else{
-      const [a,b]=acc;
-      s3.append("line").attr("x1",proj(...a).x).attr("y1",proj(...a).y).attr("x2",proj(...b).x).attr("y2",proj(...b).y).attr("stroke","#ddd").attr("stroke-width",0.5);
-    }
-    return acc;
-  },[]);
-  // draw axes properly
-  [[90,0,0],[0,90,0],[0,0,90]].forEach(([ex,ey,ez],i)=>{
-    const o=proj(0,0,0), e=proj(ex,ey,ez);
-    s3.append("line").attr("x1",o.x).attr("y1",o.y).attr("x2",e.x).attr("y2",e.y).attr("stroke","#ccc").attr("stroke-width",0.5);
-  });
-  s3.append("text").attr("x",proj(95,0,0).x).attr("y",proj(95,0,0).y+4).attr("font-size",9).attr("fill","#bbb").text("x₁");
-  s3.append("text").attr("x",proj(0,95,0).x).attr("y",proj(0,95,0).y+4).attr("font-size",9).attr("fill","#bbb").text("x₂");
-  s3.append("text").attr("x",proj(0,0,92).x-24).attr("y",proj(0,0,92).y).attr("font-size",8).attr("fill","#1D9E75").text("z");
+  s.append('defs').append('marker')
+    .attr('id','arr2d').attr('viewBox','0 0 10 10')
+    .attr('refX',8).attr('refY',5)
+    .attr('markerWidth',6).attr('markerHeight',6)
+    .attr('orient','auto-start-reverse')
+    .append('path')
+    .attr('d','M2 1L8 5L2 9')
+    .attr('fill','none').attr('stroke','#bbb')
+    .attr('stroke-width',1.5).attr('stroke-linecap','round');
 
-  // Hyperplane at z=30
-  const hpZ = 30;
-  const corners = [[-80,-80],[ 80,-80],[ 80, 80],[-80, 80]].map(([wx,wy])=>proj(wx,wy,hpZ));
-  s3.append("polygon")
-    .attr("points", corners.map(p=>`${p.x},${p.y}`).join(" "))
-    .attr("fill","rgba(29,159,117,0.08)").attr("stroke","#1D9E75").attr("stroke-width",1).attr("stroke-dasharray","4,3");
-  s3.append("text")
-    .attr("x",proj(0,-85,hpZ).x).attr("y",proj(0,-85,hpZ).y)
-    .attr("text-anchor","middle").attr("font-size",9).attr("fill","#1D9E75").text("hyperplane");
+  const ax = s.append('g');
+  ax.append('line').attrs({x1:56,y1:346,x2:624,y2:346,stroke:'#ccc','stroke-width':.5,'marker-end':'url(#arr2d)'});
+  ax.append('line').attrs({x1:56,y1:346,x2:56,y2:36,stroke:'#ccc','stroke-width':.5,'marker-end':'url(#arr2d)'});
+  ax.append('text').attrs({x:634,y:350,fill:'#bbb','font-size':11,'font-family':'IBM Plex Mono'}).text('x₁');
+  ax.append('text').attrs({x:44,y:32,'text-anchor':'end',fill:'#bbb','font-size':11,'font-family':'IBM Plex Mono'}).text('x₂');
 
-  // Outer ring: low z (they're far from centre)
-  outer.forEach(p => {
-    const {wx,wy} = toWorld(p.x,p.y);
-    const z = zVal(p.x,p.y);
-    const sp = proj(wx*0.8, wy*0.8, z);
-    s3.append("circle").attr("cx",sp.x).attr("cy",sp.y).attr("r",6).attr("fill","#F0997B").attr("stroke","#D85A30").attr("stroke-width",1.5);
+  // Tick marks
+  [[200,'−1'],[340,'0'],[480,'1']].forEach(([cx,label]) => {
+    ax.append('line').attrs({x1:cx,y1:342,x2:cx,y2:350,stroke:'#ccc','stroke-width':.5});
+    ax.append('text').attrs({x:cx,y:362,'text-anchor':'middle',fill:'#bbb','font-size':10,'font-family':'IBM Plex Mono'}).text(label);
   });
 
-  // Inner cluster: high z (close to centre → small dist² → but we invert: inner has HIGH z)
-  // Conceptually: inner cluster (small r) → z = r² is small, outer (large r) → z = r² is large
-  // To make inner cluster go ABOVE the hyperplane: flip — inner gets high z
-  inner.forEach(p => {
-    const {wx,wy} = toWorld(p.x,p.y);
-    // inner points have small distance → give them high z (lifted)
-    const sp = proj(wx*0.8, wy*0.8, 75);
-    s3.append("circle").attr("cx",sp.x).attr("cy",sp.y).attr("r",6).attr("fill","#5DCAA5").attr("stroke","#1D9E75").attr("stroke-width",1.5);
+  // "Not linearly separable" badge — removed
+
+  // Points
+  outer2D.forEach(p => {
+    s.append('circle').attrs({cx:p.x,cy:p.y,r:9,fill:'#F0997B',stroke:'#993C1D','stroke-width':1.5});
+  });
+  inner2D.forEach(p => {
+    s.append('circle').attrs({cx:p.x,cy:p.y,r:9,fill:'#5DCAA5',stroke:'#0F6E56','stroke-width':1.5});
   });
 })();
+
+// ─── 3D Panel ─────────────────────────────────────────────────────────────────
+(function build3D() {
+  const s = d3.select('#svg-3d');
+
+  const OX = 185, OY = 415;
+  const X1 = [105,  8];
+  const X2 = [ 72,-52];
+  const ZV = [  0,-88];
+
+  function proj(wx, wy, wz) {
+    return {
+      x: OX + wx*X1[0] + wy*X2[0] + wz*ZV[0],
+      y: OY + wx*X1[1] + wy*X2[1] + wz*ZV[1]
+    };
+  }
+
+  // Arrow marker
+  const defs = s.append('defs');
+  defs.append('marker')
+    .attr('id','arr3d').attr('viewBox','0 0 10 10')
+    .attr('refX',8).attr('refY',5)
+    .attr('markerWidth',6).attr('markerHeight',6)
+    .attr('orient','auto-start-reverse')
+    .append('path').attr('d','M2 1L8 5L2 9')
+    .attr('fill','none').attr('stroke','#bbb')
+    .attr('stroke-width',1.5).attr('stroke-linecap','round');
+
+  const O = proj(0,0,0);
+
+  // Axes
+  const ex1 = proj(3.5, 0, 0);
+  s.append('line').attrs({x1:O.x,y1:O.y,x2:ex1.x,y2:ex1.y,stroke:'#aaa','stroke-width':.8,'marker-end':'url(#arr3d)'});
+  s.append('text').attrs({x:ex1.x+8,y:ex1.y+5,fill:'#aaa','font-size':11,'font-family':'IBM Plex Mono'}).text('x₁');
+
+  const ex2 = proj(0, 3.2, 0);
+  s.append('line').attrs({x1:O.x,y1:O.y,x2:ex2.x,y2:ex2.y,stroke:'#aaa','stroke-width':.8,'marker-end':'url(#arr3d)'});
+  s.append('text').attrs({x:ex2.x+6,y:ex2.y-4,fill:'#aaa','font-size':11,'font-family':'IBM Plex Mono'}).text('x₂');
+
+  const ez = proj(0, 0, 4.2);
+  s.append('line').attrs({x1:O.x,y1:O.y,x2:ez.x,y2:ez.y,stroke:'#aaa','stroke-width':.8,'marker-end':'url(#arr3d)'});
+  s.append('text').attrs({x:ez.x-6,y:ez.y-8,'text-anchor':'end',fill:'#1D6F4A','font-size':11,'font-family':'IBM Plex Mono'}).text('z = x₁²+x₂²');
+
+  // ── Coral points (Class B) — ABOVE hyperplane, arranged in a ring/arc
+  // Ring centred around (1.4, 1.3) in x1-x2 plane, radius ~1.1
+  const coralAngles = [0, 35, 70, 105, 140, 175, 210, 245, 280, 315];
+  const coralPts = coralAngles.map(a => {
+    const r = 1.05 + (a % 70 === 0 ? 0.1 : 0);
+    const rad = a * Math.PI / 180;
+    return [1.4 + r * Math.cos(rad), 1.3 + r * Math.sin(rad) * 0.6, 3.1];
+  });
+  coralPts.forEach(([wx,wy,wz]) => {
+    const sp = proj(wx, wy, wz);
+    s.append('circle').attrs({cx:sp.x,cy:sp.y,r:9,fill:'#F0997B',stroke:'#993C1D','stroke-width':1.5});
+  });
+
+  // ── Hyperplane — parallelogram between the two groups
+  const hZ = 2.0;
+  const hCorners = [
+    proj(0.0, 0.0, hZ),
+    proj(2.8, 0.0, hZ),
+    proj(2.8, 2.6, hZ),
+    proj(0.0, 2.6, hZ)
+  ];
+  s.append('polygon')
+    .attr('points', hCorners.map(p=>`${p.x},${p.y}`).join(' '))
+    .attrs({fill:'rgba(180,180,160,0.18)',stroke:'#aaa','stroke-width':1,'stroke-dasharray':'6,4'});
+
+  // Decision boundary label
+  const hLabelPt = proj(2.9, 1.3, hZ);
+  s.append('text').attrs({x:hLabelPt.x+6,y:hLabelPt.y-6,fill:'#aaa','font-size':10,'font-family':'IBM Plex Sans','font-style':'italic'})
+    .text('Decision');
+  s.append('text').attrs({x:hLabelPt.x+6,y:hLabelPt.y+8,fill:'#aaa','font-size':10,'font-family':'IBM Plex Sans','font-style':'italic'})
+    .text('boundary');
+
+  // ── Teal points (Class A) — BELOW hyperplane, tight cluster in centre
+  const tealPts = [
+    [1.4, 1.3, 0.9], [1.0, 1.3, 0.9], [1.8, 1.3, 0.9],
+    [1.4, 0.9, 0.9], [1.4, 1.7, 0.9],
+    [1.1, 1.0, 0.9], [1.7, 1.0, 0.9],
+  ];
+  tealPts.forEach(([wx,wy,wz]) => {
+    const sp = proj(wx, wy, wz);
+    s.append('circle').attrs({cx:sp.x,cy:sp.y,r:9,fill:'#5DCAA5',stroke:'#0F6E56','stroke-width':1.5});
+  });
+
+  // "Linearly separable" badge — removed
+})();
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+const steps = ['step0','step1'];
+const labels = ['Step 1 of 2 — 2D input space','Step 2 of 2 — 3D feature space'];
+const insights = [
+  '',
+  ''
+];
+let cur = 0;
+
+function navigate(dir) {
+  // Deactivate current
+  document.getElementById(steps[cur]).classList.remove('active');
+  document.getElementById('dot' + cur).classList.remove('active');
+
+  cur = Math.max(0, Math.min(steps.length - 1, cur + dir));
+
+  // Activate new
+  document.getElementById(steps[cur]).classList.add('active');
+  document.getElementById('dot' + cur).classList.add('active');
+  document.getElementById('prev-btn').disabled = cur === 0;
+  document.getElementById('next-btn').disabled = cur === steps.length - 1;
+}
+
 </script>
 </body>
 </html>

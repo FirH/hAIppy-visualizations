@@ -3,237 +3,415 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>04 — SVM Interactive</title>
+<title>Interactive SVM Demo</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
-    --text: #1a1917; --muted: #6b6860;
-    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f5f4f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
   }
-  body { font-family: var(--sans, system-ui); background: var(--bg); color: var(--text); padding: 32px 24px; }
-  .back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
-  .back:hover { color: var(--text); }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 780px; }
-  .card-header { padding: 18px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
-  .card-idx { font-family: var(--mono); font-size: 10px; color: var(--muted); }
-  .card-title { font-size: 14px; font-weight: 600; flex: 1; }
-  .card-tag { font-family: var(--mono); font-size: 10px; background: #eef2e8; color: #1D6F4A; padding: 2px 8px; border-radius: 3px; }
-  .card-body { padding: 24px; overflow-x: auto; }
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #1a1a18;
+    margin-bottom: 1.25rem;
+    letter-spacing: -0.01em;
+  }
+  #app {
+    width: 100%;
+    max-width: 760px;
+  }
+  #top-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  #canvas-wrap {
+    border: 1px solid #d3d1c7;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: crosshair;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  canvas { display: block; width: 100%; height: auto; }
 
-  .ctrl-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-  .btn { font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; cursor: pointer; color: #333; transition: background 0.1s; }
-  .btn:hover { background: #f0ede6; }
-  .btn.active { background: #e1f5ee; border-color: #1D9E75; color: #0f6e56; font-weight: 500; }
-  .btn.active-b { background: #FAECE7; border-color: #D85A30; color: #993C1D; font-weight: 500; }
-  .btn.danger:hover { background: #FCEBEB; border-color: #E24B4A; color: #A32D2D; }
-  .sep { width: 1px; height: 20px; background: #ccc; margin: 0 2px; }
+  .ctrl-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1efe8;
+    border: 0.5px solid #d3d1c7;
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+  .ctrl-group label { color: #5f5e5a; white-space: nowrap; }
+  .ctrl-group span  { font-weight: 500; min-width: 36px; color: #1a1a18; }
 
-  .info-box { font-size: 12px; color: #444; padding: 8px 12px; background: #f8f7f4; border-radius: 8px; border: 1px solid #e0ddd6; line-height: 1.6; margin-bottom: 14px; }
-  .info-box b { font-weight: 600; color: #111; }
-  .status-badge { display: inline-block; margin-top: 4px; font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #e1f5ee; color: #0f6e56; }
-  .status-badge.warn { background: #FAECE7; color: #993C1D; }
+  select {
+    background: transparent;
+    color: #1a1a18;
+    border: none;
+    outline: none;
+    font-size: 13px;
+    padding: 2px 4px;
+    cursor: pointer;
+  }
+  input[type=range] {
+    background: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    accent-color: #444441;
+  }
+  button {
+    font-size: 13px;
+    padding: 5px 13px;
+    border-radius: 8px;
+    border: 0.5px solid #b4b2a9;
+    background: #fff;
+    color: #1a1a18;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  button:hover { background: #f1efe8; }
 
-  .legend-row { display: flex; gap: 16px; margin-top: 12px; font-size: 11px; color: var(--muted); flex-wrap: wrap; align-items: center; }
-  .legend-row span { display: flex; align-items: center; gap: 5px; }
-  .leg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .class-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .dot-a { background: #378ADD; }
+  .dot-b { background: #D85A30; }
+
+  #hint {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #888780;
+  }
 </style>
 </head>
 <body>
-<a class="back" href="index.html">← Back to all visualizations</a>
-<div class="card">
-  <div class="card-header">
-    <span class="card-idx">04</span>
-    <span class="card-title">SVM — Interactive Support Vector Picker</span>
-    <span class="card-tag">Module 8J</span>
+<div id="app">
+  <h1>Interactive SVM Demo</h1>
+  <div id="top-bar">
+    <button id="toggle-btn" style="display:flex;align-items:center;gap:6px;">
+      <span class="class-dot dot-a" id="active-dot"></span>
+      <span id="active-label">Class A</span> active
+    </button>
+    <button id="clear-btn">Clear</button>
+    <div class="ctrl-group">
+      <label>Kernel</label>
+      <select id="kernel-sel">
+        <option value="linear">Linear</option>
+        <option value="quadratic">Quadratic</option>
+        <option value="rbf" selected>RBF</option>
+        <option value="sigmoid">Sigmoid</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>γ</label>
+      <input type="range" id="gamma-sl" min="-2" max="2" step="0.1" value="0" style="width:70px;">
+      <span id="gamma-out">1.00</span>
+    </div>
+    <div class="ctrl-group">
+      <label>c₀</label>
+      <input type="range" id="c0-sl" min="-2" max="2" step="0.1" value="-1" style="width:70px;">
+      <span id="c0-out">0.10</span>
+    </div>
+    <div class="ctrl-group">
+      <label>C</label>
+      <input type="range" id="C-sl" min="-2" max="3" step="0.1" value="1" style="width:70px;">
+      <span id="C-out">10.00</span>
+    </div>
+    <div class="ctrl-group" style="gap:8px;">
+      <input type="checkbox" id="highlight-sv" checked>
+      <label for="highlight-sv" style="cursor:pointer;">Highlight support vectors</label>
+    </div>
   </div>
-  <div class="card-body">
-    <div class="ctrl-row">
-      <button class="btn" id="svm-randA">+ random A</button>
-      <button class="btn" id="svm-randB">+ random B</button>
-      <button class="btn" id="svm-randMix">+ random mix</button>
-      <div class="sep"></div>
-      <button class="btn" id="svm-placeA">place A</button>
-      <button class="btn" id="svm-placeB">place B</button>
-      <div class="sep"></div>
-      <button class="btn" id="svm-reset">reset SVs</button>
-      <button class="btn danger" id="svm-clear">clear all</button>
-    </div>
-    <div class="info-box" id="svm-info">
-      <b>Step 1:</b> Click a <span style="color:#1D9E75;font-weight:600">teal</span> point to set it as the support vector for Class A.
-      <br><span class="status-badge" id="svm-status">No support vectors selected</span>
-    </div>
-    <svg id="svm-canvas" width="680" height="380"
-         style="display:block;border:1px solid #e0ddd6;border-radius:10px;background:#fff;cursor:default"></svg>
-    <div class="legend-row">
-      <span><span class="leg-dot" style="background:#5DCAA5;border:2px solid #1D9E75"></span> Class A</span>
-      <span><span class="leg-dot" style="background:#F0997B;border:2px solid #D85A30"></span> Class B</span>
-      <span><span class="leg-dot" style="background:#E24B4A"></span> Violation (point inside margin)</span>
-    </div>
+  <div id="canvas-wrap">
+    <canvas id="svm-canvas"></canvas>
   </div>
+  <p id="hint">Click to place Class A points · Right-click (or toggle) for Class B · Need at least 1 point per class</p>
 </div>
 
 <script>
 (function() {
-  const ns = "http://www.w3.org/2000/svg";
-  let classA = [
-    {x:90,y:200},{x:110,y:130},{x:75,y:280},{x:140,y:170},{x:60,y:160},
-    {x:130,y:260},{x:95,y:320},{x:155,y:100},{x:70,y:90},{x:160,y:230}
-  ];
-  let classB = [
-    {x:520,y:180},{x:480,y:260},{x:560,y:120},{x:500,y:310},{x:540,y:230},
-    {x:580,y:280},{x:460,y:140},{x:590,y:170},{x:510,y:80},{x:460,y:320}
-  ];
-  let svA = null, svB = null, mode = 'select';
+  const canvas = document.getElementById('svm-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = 700, H = 560;
+  canvas.width = W; canvas.height = H;
 
-  function rand(lo, hi) { return Math.round(lo + Math.random() * (hi - lo)); }
-  function svgEl(tag, attrs) {
-    const e = document.createElementNS(ns, tag);
-    Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
-    return e;
+  const FMIN = -1, FRANGE = 2;
+  function toFeature(cx, cy) { return [FMIN + (cx / W) * FRANGE, FMIN + (cy / H) * FRANGE]; }
+  function toCanvas(fx, fy)  { return [(fx - FMIN) / FRANGE * W, (fy - FMIN) / FRANGE * H]; }
+
+  let points = [], activeClass = 1, svmResult = null, showSV = true, scale = 1, cachedVM = null;
+
+  const gammaSlider = document.getElementById('gamma-sl');
+  const c0Slider    = document.getElementById('c0-sl');
+  const CSlider     = document.getElementById('C-sl');
+  const gammaOut    = document.getElementById('gamma-out');
+  const c0Out       = document.getElementById('c0-out');
+  const COut        = document.getElementById('C-out');
+  const kernelSel   = document.getElementById('kernel-sel');
+  const activeDot   = document.getElementById('active-dot');
+  const activeLbl   = document.getElementById('active-label');
+  const hlSV        = document.getElementById('highlight-sv');
+
+  function getGamma() { return Math.pow(10, parseFloat(gammaSlider.value)); }
+  function getC0()    { return Math.pow(10, parseFloat(c0Slider.value)); }
+  function getC()     { return Math.pow(10, parseFloat(CSlider.value)); }
+  function getKernel(){ return kernelSel.value; }
+
+  function updateDisplays() {
+    gammaOut.textContent = getGamma().toFixed(2);
+    c0Out.textContent    = getC0().toFixed(2);
+    COut.textContent     = getC().toFixed(2);
+  }
+  updateDisplays();
+
+  function dot2(a, b) { return a[0]*b[0] + a[1]*b[1]; }
+  function sqdist(a, b) { const dx=a[0]-b[0], dy=a[1]-b[1]; return dx*dx+dy*dy; }
+
+  function kernelFn(xi, xj) {
+    const k=getKernel(), g=getGamma(), c0=getC0();
+    if (k==='linear')    return dot2(xi, xj);
+    if (k==='quadratic') return Math.pow(dot2(xi, xj) + c0, 2);
+    if (k==='rbf')       return Math.exp(-g * sqdist(xi, xj));
+    if (k==='sigmoid')   return Math.tanh(g * dot2(xi, xj) + c0);
+    return dot2(xi, xj);
   }
 
-  const canvas = document.getElementById("svm-canvas");
-  const infoEl = document.getElementById("svm-info");
-  const statusEl = document.getElementById("svm-status");
+  function trainSVM(pts) {
+    const n = pts.length; if (n < 2) return null;
+    const X = pts.map(p => p.f), Y = pts.map(p => p.cls), Cv = getC();
+    const tol=1e-3, eps=1e-6, maxPasses=20;
+    const K = Array.from({length:n}, (_,i) => Array.from({length:n}, (_,j) => kernelFn(X[i], X[j])));
+    const alpha = new Float64Array(n); let b = 0;
 
-  function isInsideMargin(p) {
-    if (!svA || !svB) return false;
-    const dx = svB.x - svA.x, dy = svB.y - svA.y;
-    const d = Math.sqrt(dx*dx + dy*dy) || 1;
-    const t = ((p.x - svA.x)*dx + (p.y - svA.y)*dy) / (d*d);
-    if (t <= 0 || t >= 1) return false;
-    const proj = { x: svA.x + t*dx, y: svA.y + t*dy };
-    const perpDist = Math.sqrt((p.x - proj.x)**2 + (p.y - proj.y)**2);
-    return perpDist < d / 2 * 0.9;
-  }
+    function fval(i) { let s=0; for (let k=0;k<n;k++) s+=alpha[k]*Y[k]*K[k][i]; return s-b; }
 
-  function render() {
-    while (canvas.firstChild) canvas.removeChild(canvas.firstChild);
-
-    if (svA && svB) {
-      const dx = svB.x - svA.x, dy = svB.y - svA.y;
-      const d = Math.sqrt(dx*dx + dy*dy) || 1;
-      const ext = 900;
-      const mx = (svA.x + svB.x) / 2, my = (svA.y + svB.y) / 2;
-
-      // Margin fill
-      const poly = svgEl("polygon", {
-        points: [
-          `${svA.x - dx/d*ext} ${svA.y - dy/d*ext}`,
-          `${svA.x + dx/d*ext} ${svA.y + dy/d*ext}`,
-          `${svB.x + dx/d*ext} ${svB.y + dy/d*ext}`,
-          `${svB.x - dx/d*ext} ${svB.y - dy/d*ext}`
-        ].join(" "),
-        fill: "rgba(29,159,117,0.06)"
-      });
-      canvas.appendChild(poly);
-
-      // Margin edge lines
-      [[svA.x, svA.y, "#1D9E75"], [svB.x, svB.y, "#D85A30"]].forEach(([px, py, col]) => {
-        canvas.appendChild(svgEl("line", {
-          x1: px - dx/d*ext, y1: py - dy/d*ext, x2: px + dx/d*ext, y2: py + dy/d*ext,
-          stroke: col, "stroke-width": 1, "stroke-dasharray": "4,3", opacity: "0.5"
-        }));
-      });
-
-      // Decision boundary
-      canvas.appendChild(svgEl("line", {
-        x1: mx - dx/d*ext, y1: my - dy/d*ext, x2: mx + dx/d*ext, y2: my + dy/d*ext,
-        stroke: "#1D6F4A", "stroke-width": 1.5, "stroke-dasharray": "6,4"
-      }));
-    }
-
-    // Points
-    const allPts = [
-      ...classA.map(p => ({...p, cls:"A"})),
-      ...classB.map(p => ({...p, cls:"B"}))
-    ];
-
-    allPts.forEach((p, i) => {
-      const isSVA = svA && p.cls==="A" && p.x===svA.x && p.y===svA.y;
-      const isSVB = svB && p.cls==="B" && p.x===svB.x && p.y===svB.y;
-      const violation = !isSVA && !isSVB && isInsideMargin(p);
-
-      const fill   = p.cls === "A" ? "#5DCAA5" : "#F0997B";
-      const stroke = p.cls === "A" ? "#1D9E75"  : "#D85A30";
-
-      if (isSVA || isSVB) {
-        canvas.appendChild(svgEl("circle", {cx:p.x, cy:p.y, r:13, fill:"none", stroke, "stroke-width":1.5, "stroke-dasharray":"3,2"}));
-        canvas.appendChild(svgEl("circle", {cx:p.x, cy:p.y, r:7, fill, stroke, "stroke-width":2.5}));
-      } else {
-        const c = svgEl("circle", {
-          cx: p.x, cy: p.y, r: 6,
-          fill: violation ? "#E24B4A" : fill,
-          stroke: violation ? "#A32D2D" : stroke,
-          "stroke-width": 1.5,
-          cursor: "pointer",
-          "data-i": i
-        });
-        c.addEventListener("click", () => onClickPt(p, p.cls));
-        canvas.appendChild(c);
+    let passes = 0;
+    while (passes < maxPasses) {
+      let changed = 0;
+      for (let i=0; i<n; i++) {
+        const Ei = fval(i) - Y[i];
+        if (!((Y[i]*Ei < -tol && alpha[i] < Cv) || (Y[i]*Ei > tol && alpha[i] > eps))) continue;
+        let j=-1, maxDiff=0;
+        for (let k=0; k<n; k++) {
+          if (k===i) continue;
+          const d = Math.abs(Ei - (fval(k) - Y[k]));
+          if (d > maxDiff) { maxDiff=d; j=k; }
+        }
+        if (j < 0) { j = Math.floor(Math.random()*(n-1)); if (j>=i) j++; }
+        const Ej=fval(j)-Y[j], ai0=alpha[i], aj0=alpha[j];
+        let L, H;
+        if (Y[i] !== Y[j]) { L=Math.max(0,aj0-ai0); H=Math.min(Cv,Cv+aj0-ai0); }
+        else                { L=Math.max(0,ai0+aj0-Cv); H=Math.min(Cv,ai0+aj0); }
+        if (L >= H-eps) continue;
+        const eta = 2*K[i][j]-K[i][i]-K[j][j]; if (eta>=0) continue;
+        let aj = Math.max(L, Math.min(H, aj0 - Y[j]*(Ei-Ej)/eta));
+        if (Math.abs(aj-aj0) < eps*(aj+aj0+eps)) continue;
+        alpha[j]=aj; alpha[i]=ai0+Y[i]*Y[j]*(aj0-aj);
+        const b1=b+Ei+Y[i]*(alpha[i]-ai0)*K[i][i]+Y[j]*(alpha[j]-aj0)*K[i][j];
+        const b2=b+Ej+Y[i]*(alpha[i]-ai0)*K[i][j]+Y[j]*(alpha[j]-aj0)*K[j][j];
+        b=(b1+b2)/2; changed++;
       }
-    });
-
-    // Status update
-    if (!svA || !svB) {
-      statusEl.className = "status-badge";
-      statusEl.textContent = "No support vectors selected";
-      return;
+      if (changed===0) passes++; else passes=0;
     }
-    const violations = [...classA, ...classB].filter(p => isInsideMargin(p));
-    if (violations.length === 0) {
-      statusEl.className = "status-badge";
-      statusEl.textContent = "✓ Valid margin — no points inside";
-    } else {
-      statusEl.className = "status-badge warn";
-      statusEl.textContent = `${violations.length} violation(s) — point(s) inside margin`;
+    return {alpha, b, X, Y, n};
+  }
+
+  function fRaw(fx, fy, res) {
+    if (!res) return 0;
+    const {alpha, b, X, Y, n} = res; let s=0;
+    for (let i=0; i<n; i++) if (alpha[i]>1e-6) s += alpha[i]*Y[i]*kernelFn(X[i],[fx,fy]);
+    return s-b;
+  }
+
+  function computeScale(res) {
+    if (!res) return 1;
+    const {alpha, X, Y, n} = res; const eps=1e-5;
+    let posSum=0, negSum=0, posN=0, negN=0;
+    for (let i=0; i<n; i++) {
+      if (alpha[i] < eps) continue;
+      const v = fRaw(X[i][0], X[i][1], res);
+      if (Y[i]>0) { posSum+=v; posN++; } else { negSum+=v; negN++; }
+    }
+    const posAvg=posN>0?posSum/posN:1, negAvg=negN>0?negSum/negN:-1;
+    const s = (Math.abs(posAvg)+Math.abs(negAvg))/2;
+    return s > 1e-6 ? s : 1;
+  }
+
+  function fNorm(fx, fy, res) { return fRaw(fx, fy, res) / scale; }
+
+  const GSTEP = 4;
+  function buildValueMap(res) {
+    const cols=Math.ceil(W/GSTEP)+2, rows=Math.ceil(H/GSTEP)+2;
+    const map = new Float32Array(cols*rows);
+    for (let r=0; r<rows; r++)
+      for (let c=0; c<cols; c++) {
+        const [fx,fy] = toFeature(c*GSTEP, r*GSTEP);
+        map[r*cols+c] = res ? fNorm(fx, fy, res) : 0;
+      }
+    return {map, cols, rows};
+  }
+
+  function sampleMap(vm, px, py) {
+    const {map, cols, rows} = vm;
+    const gc=px/GSTEP, gr=py/GSTEP;
+    const c0=Math.min(Math.floor(gc),cols-2), r0=Math.min(Math.floor(gr),rows-2);
+    const tx=gc-c0, ty=gr-r0;
+    return (map[r0*cols+c0]*(1-tx)+map[r0*cols+c0+1]*tx)*(1-ty)
+          +(map[(r0+1)*cols+c0]*(1-tx)+map[(r0+1)*cols+c0+1]*tx)*ty;
+  }
+
+  function drawAll(res, vm) {
+    // Phase 1: pixel buffer — white bg + dashed grid + margin fill
+    const imgData = ctx.createImageData(W, H);
+    const d = imgData.data;
+    const gridX=[], gridY=[];
+    for (let i=1; i<=4; i++) { gridX.push(Math.round(W*i/5)); gridY.push(Math.round(H*i/5)); }
+    const DASH=5, PERIOD=10;
+
+    for (let py=0; py<H; py++) {
+      for (let px=0; px<W; px++) {
+        const idx = (py*W+px)*4;
+        let r=255, g=255, b=255, a=255;
+
+        // dashed grid lines
+        const onVGrid = gridX.some(gx => px===gx);
+        const onHGrid = gridY.some(gy => py===gy);
+        if (onVGrid || onHGrid) {
+          const pos = onVGrid ? py : px;
+          if (pos % PERIOD < DASH) { r=180; g=178; b=169; a=130; }
+        }
+
+        // margin shading
+        if (res && vm) {
+          const v = sampleMap(vm, px, py);
+          if (Math.abs(v) <= 1) {
+            const af = 180/255;
+            r = Math.round(r*(1-af)+195*af);
+            g = Math.round(g*(1-af)+195*af);
+            b = Math.round(b*(1-af)+195*af);
+          }
+        }
+
+        d[idx]=r; d[idx+1]=g; d[idx+2]=b; d[idx+3]=a;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // Phase 2: contour lines
+    if (res && vm) {
+      drawContour(vm,  1, '#999994', [7,5], 1.2);
+      drawContour(vm, -1, '#999994', [7,5], 1.2);
+      drawContour(vm,  0, '#1a1a18', [],    2);
+    }
+
+    // Phase 3: points
+    drawPoints(res);
+  }
+
+  function drawContour(vm, level, color, dash, width) {
+    const {map, cols, rows} = vm;
+    ctx.save();
+    ctx.strokeStyle=color; ctx.setLineDash(dash); ctx.lineWidth=width;
+    ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.beginPath();
+    for (let r=0; r<rows-1; r++) {
+      for (let c=0; c<cols-1; c++) {
+        const v00=map[r*cols+c]-level,       v10=map[r*cols+c+1]-level;
+        const v01=map[(r+1)*cols+c]-level,   v11=map[(r+1)*cols+c+1]-level;
+        const px=c*GSTEP, py=r*GSTEP, ps=GSTEP;
+        const pts=[];
+        if (v00*v10<0) pts.push([px+ps*Math.abs(v00)/(Math.abs(v00)+Math.abs(v10)), py]);
+        if (v00*v01<0) pts.push([px, py+ps*Math.abs(v00)/(Math.abs(v00)+Math.abs(v01))]);
+        if (v10*v11<0) pts.push([px+ps, py+ps*Math.abs(v10)/(Math.abs(v10)+Math.abs(v11))]);
+        if (v01*v11<0) pts.push([px+ps*Math.abs(v01)/(Math.abs(v01)+Math.abs(v11)), py+ps]);
+        if (pts.length===2) { ctx.moveTo(pts[0][0],pts[0][1]); ctx.lineTo(pts[1][0],pts[1][1]); }
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPoints(res) {
+    for (let i=0; i<points.length; i++) {
+      const p = points[i];
+      const [cx,cy] = toCanvas(p.f[0], p.f[1]);
+      const color = p.cls===1 ? '#378ADD' : '#D85A30';
+      const isSV = showSV && res && res.alpha[i] > 1e-5;
+      ctx.save();
+      if (isSV) {
+        ctx.beginPath(); ctx.arc(cx,cy,12,0,Math.PI*2);
+        ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(cx,cy,6,0,Math.PI*2);
+      ctx.fillStyle=color; ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.restore();
     }
   }
 
-  function onClickPt(p, cls) {
-    if (mode !== 'select') return;
-    if (cls === "A") {
-      svA = p;
-      infoEl.innerHTML = svB
-        ? '<b>Done!</b> Both SVs set. Try different combinations.<br><span class="status-badge" id="svm-status"></span>'
-        : '<b>Step 2:</b> Now click a <span style="color:#D85A30;font-weight:600">coral</span> point for Class B.<br><span class="status-badge" id="svm-status">No support vectors selected</span>';
-    } else {
-      svB = p;
-      infoEl.innerHTML = svA
-        ? '<b>Done!</b> Both SVs set. Try different combinations.<br><span class="status-badge" id="svm-status"></span>'
-        : '<b>Step 2:</b> Now click a <span style="color:#1D9E75;font-weight:600">teal</span> point for Class A.<br><span class="status-badge" id="svm-status">No support vectors selected</span>';
+  let computeTimer = null;
+  function scheduleCompute() { clearTimeout(computeTimer); computeTimer = setTimeout(recompute, 80); }
+
+  function recompute() {
+    svmResult=null; scale=1; cachedVM=null;
+    const ha=points.filter(p=>p.cls===1), hb=points.filter(p=>p.cls===-1);
+    if (ha.length>0 && hb.length>0) {
+      try {
+        svmResult = trainSVM(points);
+        scale = computeScale(svmResult);
+        cachedVM = buildValueMap(svmResult);
+      } catch(e) { svmResult=null; }
     }
     render();
   }
 
-  function resetInfo() {
-    infoEl.innerHTML = '<b>Step 1:</b> Click a <span style="color:#1D9E75;font-weight:600">teal</span> point to set as support vector for Class A.<br><span class="status-badge" id="svm-status">No support vectors selected</span>';
+  function render() {
+    ctx.clearRect(0,0,W,H);
+    drawAll(svmResult, cachedVM);
   }
 
-  canvas.addEventListener("click", e => {
-    if (mode === "placeA" || mode === "placeB") {
-      const r = canvas.getBoundingClientRect();
-      const pt = { x: e.clientX - r.left, y: e.clientY - r.top };
-      if (mode === "placeA") classA.push(pt); else classB.push(pt);
-      render();
-    }
+  canvas.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.clientX-rect.left)*(W/rect.width);
+    const cy = (e.clientY-rect.top)*(H/rect.height);
+    const [fx,fy] = toFeature(cx,cy);
+    const cls = e.button===2 ? -activeClass : activeClass;
+    points.push({f:[fx,fy], cls});
+    scheduleCompute();
   });
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-  function setMode(m) {
-    mode = m;
-    document.getElementById("svm-placeA").className = "btn" + (m === "placeA" ? " active" : "");
-    document.getElementById("svm-placeB").className = "btn" + (m === "placeB" ? " active-b" : "");
-    canvas.style.cursor = (m === "placeA" || m === "placeB") ? "crosshair" : "default";
-  }
-
-  document.getElementById("svm-randA").addEventListener("click", () => { for (let i=0;i<3;i++) classA.push({x:rand(40,280),y:rand(60,340)}); render(); });
-  document.getElementById("svm-randB").addEventListener("click", () => { for (let i=0;i<3;i++) classB.push({x:rand(380,640),y:rand(60,340)}); render(); });
-  document.getElementById("svm-randMix").addEventListener("click", () => { for (let i=0;i<2;i++){ classA.push({x:rand(40,280),y:rand(60,340)}); classB.push({x:rand(380,640),y:rand(60,340)}); } render(); });
-  document.getElementById("svm-placeA").addEventListener("click", () => setMode(mode === "placeA" ? "select" : "placeA"));
-  document.getElementById("svm-placeB").addEventListener("click", () => setMode(mode === "placeB" ? "select" : "placeB"));
-  document.getElementById("svm-reset").addEventListener("click", () => { svA = null; svB = null; resetInfo(); render(); });
-  document.getElementById("svm-clear").addEventListener("click", () => { classA = []; classB = []; svA = null; svB = null; resetInfo(); render(); });
+  document.getElementById('toggle-btn').addEventListener('click', () => {
+    activeClass = activeClass===1 ? -1 : 1;
+    activeDot.className = 'class-dot ' + (activeClass===1 ? 'dot-a' : 'dot-b');
+    activeLbl.textContent = activeClass===1 ? 'Class A' : 'Class B';
+  });
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    points=[]; svmResult=null; scale=1; cachedVM=null; render();
+  });
+  [gammaSlider, c0Slider, CSlider].forEach(sl => sl.addEventListener('input', () => {
+    updateDisplays(); scheduleCompute();
+  }));
+  kernelSel.addEventListener('change', scheduleCompute);
+  hlSV.addEventListener('change', () => { showSV=hlSV.checked; render(); });
 
   render();
 })();
