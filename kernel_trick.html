@@ -3,26 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>05 — Kernel Trick</title>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<title>Kernel Trick — Interactive</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f7f6f2;
-    --card: #fff;
-    --border: #e2dfd6;
-    --text: #1a1917;
-    --muted: #6b6860;
-    --teal: #5DCAA5;
-    --teal-dk: #0F6E56;
-    --coral: #F0997B;
-    --coral-dk: #993C1D;
-    --green-accent: #1D9E75;
+    --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
+    --text: #1a1917; --muted: #6b6860;
+    --teal: #5DCAA5; --teal-dk: #0F6E56;
+    --coral: #F0997B; --coral-dk: #993C1D;
     --mono: 'IBM Plex Mono', monospace;
     --sans: 'IBM Plex Sans', sans-serif;
   }
-
   body {
     font-family: var(--sans);
     background: var(--bg);
@@ -30,20 +22,6 @@
     padding: 32px 24px;
     min-height: 100vh;
   }
-
-  .back {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 24px;
-    transition: color .15s;
-  }
-  .back:hover { color: var(--text); }
-
   .card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -51,356 +29,411 @@
     overflow: hidden;
     max-width: 820px;
   }
-
   .card-header {
     padding: 18px 24px 16px;
     border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 14px;
+    display: flex; align-items: center; gap: 14px;
   }
-  .card-idx { font-family: var(--mono); font-size: 10px; color: var(--muted); }
   .card-title { font-size: 14px; font-weight: 600; flex: 1; }
-  .card-tag {
-    font-family: var(--mono);
-    font-size: 10px;
-    background: #eef2e8;
-    color: #1D6F4A;
-    padding: 2px 8px;
-    border-radius: 3px;
-  }
-
   .card-body { padding: 24px; }
 
-  /* Step indicator */
-  .step-nav {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-  .step-dots { display: flex; gap: 6px; }
-  .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #d3d1c7;
-    transition: background .25s;
-  }
-  .dot.active { background: var(--text); }
-  .step-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-  }
-
-  /* Steps */
-  .step { display: none; }
-  .step.active { display: block; animation: step-in .35s ease forwards; }
-  @keyframes step-in {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  svg.viz {
-    display: block;
-    width: 100%;
+  canvas {
+    display: block; width: 100%;
     border: 1px solid var(--border);
     border-radius: 10px;
     background: #fff;
+    cursor: grab;
+    touch-action: none;
   }
+  canvas:active { cursor: grabbing; }
 
-  .legend-row {
+  .controls {
+    margin-top: 16px;
     display: flex;
-    gap: 18px;
-    margin-top: 10px;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .slider-label {
+    font-family: var(--mono);
     font-size: 11px;
     color: var(--muted);
-    flex-wrap: wrap;
+    min-width: 110px;
+  }
+  input[type=range] {
+    flex: 1;
+    accent-color: var(--teal-dk);
+    height: 4px;
+    cursor: pointer;
+  }
+  .slider-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    min-width: 36px;
+    text-align: right;
+  }
+  .hint {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    text-align: center;
+    margin-top: 4px;
+  }
+  .legend-row {
+    display: flex; gap: 18px; margin-top: 12px;
+    font-size: 11px; color: var(--muted); flex-wrap: wrap;
   }
   .legend-row span { display: flex; align-items: center; gap: 5px; }
   .leg-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-    flex-shrink: 0;
+    width: 10px; height: 10px; border-radius: 50%;
+    display: inline-block; flex-shrink: 0;
   }
-
-  /* Nav buttons */
-  .nav-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 20px;
-    gap: 16px;
+  .btn-row {
+    display: flex; gap: 8px; margin-top: 4px;
   }
   .btn {
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 7px 16px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--card);
-    color: var(--text);
-    cursor: pointer;
-    transition: background .15s, border-color .15s;
-    white-space: nowrap;
+    font-family: var(--mono); font-size: 11px;
+    padding: 6px 14px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--card); color: var(--text);
+    cursor: pointer; transition: background .15s;
   }
-  .btn:hover:not(:disabled) {
-    background: var(--bg);
-    border-color: #ccc;
-  }
-  .btn:disabled { opacity: .3; cursor: default; }
-
-  .insight-box {
-    font-size: 12px;
-    color: #444;
-    padding: 10px 14px;
-    background: #f8f7f4;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    line-height: 1.7;
-    flex: 1;
-    text-align: center;
-  }
-  .insight-box b { font-weight: 600; color: #222; }
-
-  /* Mapping arrow (visible between steps when we do side-by-side on wider screens) */
-  .phi-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    text-align: center;
-    margin: 6px 0 2px;
-  }
-
-  /* Hyperplane badge */
-  .hp-note {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    color: var(--teal-dk);
-    background: #e1f5ee;
-    border: 1px solid #9fe1cb;
-    border-radius: 4px;
-    padding: 3px 8px;
-    margin-top: 10px;
-  }
+  .btn:hover { background: var(--bg); }
 </style>
 </head>
 <body>
 
 <div class="card">
   <div class="card-header">
-    <span class="card-title">Kernel Trick — 2D → 3D Mapping (RBF)</span>
+    <span class="card-title">Kernel Trick — Interactive 2D → 3D</span>
   </div>
-
   <div class="card-body">
+    <canvas id="c" height="460"></canvas>
 
-    <!-- Step indicator -->
-    <div class="step-nav">
-      <div class="step-dots">
-        <div class="dot active" id="dot0"></div>
-        <div class="dot" id="dot1"></div>
+    <div class="controls">
+      <div class="slider-row">
+        <span class="slider-label">Lift (z = r²)</span>
+        <input type="range" id="lift" min="0" max="100" value="0" step="1">
+        <span class="slider-val" id="lift-val">0%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Rotate X</span>
+        <input type="range" id="rx" min="-90" max="90" value="0" step="1">
+        <span class="slider-val" id="rx-val">0°</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Rotate Y</span>
+        <input type="range" id="ry" min="-180" max="180" value="0" step="1">
+        <span class="slider-val" id="ry-val">0°</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="animateTo(0,0,0)">Reset to 2D</button>
+        <button class="btn" onclick="animateTo(100,-38,18)">Show 3D view</button>
+        <button class="btn" onclick="animateTo(100,-20,0)">Side view</button>
       </div>
     </div>
 
-    <!-- ── STEP 0: 2D ── -->
-    <div class="step active" id="step0">
-      <svg class="viz" viewBox="0 0 680 400" id="svg-2d"></svg>
-      <div class="legend-row">
-        <span><span class="leg-dot" style="background:#5DCAA5;border:2px solid #0F6E56"></span>Class A — inner cluster</span>
-        <span><span class="leg-dot" style="background:#F0997B;border:2px solid #993C1D"></span>Class B — outer ring</span>
-      </div>
+    <div class="legend-row">
+      <span><span class="leg-dot" style="background:#5DCAA5;border:2px solid #0F6E56"></span>Class A — inner cluster</span>
+      <span><span class="leg-dot" style="background:#F0997B;border:2px solid #993C1D"></span>Class B — outer ring</span>
     </div>
-
-    <!-- ── STEP 1: 3D ── -->
-    <div class="step" id="step1">
-      <svg class="viz" viewBox="0 0 680 460" id="svg-3d"></svg>
-      <div class="legend-row">
-        <span><span class="leg-dot" style="background:#5DCAA5;border:2px solid #0F6E56"></span>Class A — lifted (high z)</span>
-        <span><span class="leg-dot" style="background:#F0997B;border:2px solid #993C1D"></span>Class B — flat (low z)</span>
-      </div>
-    </div>
-
-    <!-- Nav -->
-    <div class="nav-row">
-      <button class="btn" id="prev-btn" onclick="navigate(-1)" disabled>← Back</button>
-      <button class="btn" id="next-btn" onclick="navigate(1)">Next →</button>
-    </div>
-
-  </div><!-- /card-body -->
-</div><!-- /card -->
+    <p class="hint">Drag to rotate · Use sliders to control lift and angle · Click buttons for preset views</p>
+  </div>
+</div>
 
 <script>
-// ─── attrs polyfill — must be first ───────────────────────────────────────────
-d3.selection.prototype.attrs = function(map) {
-  for (const [k, v] of Object.entries(map)) this.attr(k, v);
-  return this;
-};
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
-// Inner cluster — small radius from centre (0,0)
-const inner2D = [
-  {x:340,y:190},{x:312,y:165},{x:368,y:168},
-  {x:318,y:215},{x:360,y:210},{x:297,y:192},{x:376,y:182}
+// ─── Point data in 2D (normalised, centre=0) ──────────────────────────────────
+// Inner cluster (Class A, teal)
+const innerRaw = [
+  [0,0],[-.2,-.18],[.2,-.16],[-.16,.18],[.14,.14],[-.31,-.01],[.26,-.06]
 ];
-// Outer ring — large radius
-const outer2D = [
-  {x:130,y:190},{x:550,y:190},{x:340,y:58},{x:340,y:315},
-  {x:188,y:108},{x:490,y:108},{x:188,y:272},{x:490,y:272},
-  {x:108,y:190},{x:568,y:190}
+// Outer ring (Class B, coral)
+const outerRaw = [
+  [-1.5,0],[1.5,0],[0,-1],[0,.9],
+  [-.92,-.59],[.92,-.59],[-.92,.58],[.92,.58],
+  [-1.67,0],[1.67,0]
 ];
 
-// ─── 2D Panel ─────────────────────────────────────────────────────────────────
-(function build2D() {
-  const s = d3.select('#svg-2d');
+// Scale to nice world units
+const S = 1.4;
+const innerPts = innerRaw.map(([x,y]) => ({ x2:x*S, y2:y*S, cls:'A' }));
+const outerPts = outerRaw.map(([x,y]) => ({ x2:x*S, y2:y*S, cls:'B' }));
+const allPts   = [...innerPts, ...outerPts];
 
-  // Axes
-  s.append('defs').append('marker')
-    .attr('id','arr2d').attr('viewBox','0 0 10 10')
-    .attr('refX',8).attr('refY',5)
-    .attr('markerWidth',6).attr('markerHeight',6)
-    .attr('orient','auto-start-reverse')
-    .append('path')
-    .attr('d','M2 1L8 5L2 9')
-    .attr('fill','none').attr('stroke','#bbb')
-    .attr('stroke-width',1.5).attr('stroke-linecap','round');
+// Compute z = x² + y² for each point, then normalise to [0, 2.5]
+allPts.forEach(p => { p.zFull = p.x2*p.x2 + p.y2*p.y2; });
+const zMax = Math.max(...allPts.map(p => p.zFull));
+// Inner has LOW r² → LOW z (they start close to centre)
+// But conceptually we INVERT so inner goes HIGH (separated above)
+// Class A (inner) → lifted UP; Class B (outer) → stays LOW
+// Invert: innerZ = zMax - r², outerZ = r² (scaled)
+allPts.forEach(p => {
+  const r2 = p.zFull / zMax;
+  p.zLift = p.cls === 'A'
+    ? 2.8 * (1 - r2 * 0.5)   // inner: high z, slight spread
+    : 0.3 + r2 * 0.4;         // outer: low z
+});
 
-  const ax = s.append('g');
-  ax.append('line').attrs({x1:56,y1:346,x2:624,y2:346,stroke:'#ccc','stroke-width':.5,'marker-end':'url(#arr2d)'});
-  ax.append('line').attrs({x1:56,y1:346,x2:56,y2:36,stroke:'#ccc','stroke-width':.5,'marker-end':'url(#arr2d)'});
-  ax.append('text').attrs({x:634,y:350,fill:'#bbb','font-size':11,'font-family':'IBM Plex Mono'}).text('x₁');
-  ax.append('text').attrs({x:44,y:32,'text-anchor':'end',fill:'#bbb','font-size':11,'font-family':'IBM Plex Mono'}).text('x₂');
+// ─── Canvas & state ──────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
 
-  // Tick marks
-  [[200,'−1'],[340,'0'],[480,'1']].forEach(([cx,label]) => {
-    ax.append('line').attrs({x1:cx,y1:342,x2:cx,y2:350,stroke:'#ccc','stroke-width':.5});
-    ax.append('text').attrs({x:cx,y:362,'text-anchor':'middle',fill:'#bbb','font-size':10,'font-family':'IBM Plex Mono'}).text(label);
-  });
-
-  // "Not linearly separable" badge — removed
-
-  // Points
-  outer2D.forEach(p => {
-    s.append('circle').attrs({cx:p.x,cy:p.y,r:9,fill:'#F0997B',stroke:'#993C1D','stroke-width':1.5});
-  });
-  inner2D.forEach(p => {
-    s.append('circle').attrs({cx:p.x,cy:p.y,r:9,fill:'#5DCAA5',stroke:'#0F6E56','stroke-width':1.5});
-  });
-})();
-
-// ─── 3D Panel ─────────────────────────────────────────────────────────────────
-(function build3D() {
-  const s = d3.select('#svg-3d');
-
-  const OX = 185, OY = 415;
-  const X1 = [105,  8];
-  const X2 = [ 72,-52];
-  const ZV = [  0,-88];
-
-  function proj(wx, wy, wz) {
-    return {
-      x: OX + wx*X1[0] + wy*X2[0] + wz*ZV[0],
-      y: OY + wx*X1[1] + wy*X2[1] + wz*ZV[1]
-    };
-  }
-
-  // Arrow marker
-  const defs = s.append('defs');
-  defs.append('marker')
-    .attr('id','arr3d').attr('viewBox','0 0 10 10')
-    .attr('refX',8).attr('refY',5)
-    .attr('markerWidth',6).attr('markerHeight',6)
-    .attr('orient','auto-start-reverse')
-    .append('path').attr('d','M2 1L8 5L2 9')
-    .attr('fill','none').attr('stroke','#bbb')
-    .attr('stroke-width',1.5).attr('stroke-linecap','round');
-
-  const O = proj(0,0,0);
-
-  // Axes
-  const ex1 = proj(3.5, 0, 0);
-  s.append('line').attrs({x1:O.x,y1:O.y,x2:ex1.x,y2:ex1.y,stroke:'#aaa','stroke-width':.8,'marker-end':'url(#arr3d)'});
-  s.append('text').attrs({x:ex1.x+8,y:ex1.y+5,fill:'#aaa','font-size':11,'font-family':'IBM Plex Mono'}).text('x₁');
-
-  const ex2 = proj(0, 3.2, 0);
-  s.append('line').attrs({x1:O.x,y1:O.y,x2:ex2.x,y2:ex2.y,stroke:'#aaa','stroke-width':.8,'marker-end':'url(#arr3d)'});
-  s.append('text').attrs({x:ex2.x+6,y:ex2.y-4,fill:'#aaa','font-size':11,'font-family':'IBM Plex Mono'}).text('x₂');
-
-  const ez = proj(0, 0, 4.2);
-  s.append('line').attrs({x1:O.x,y1:O.y,x2:ez.x,y2:ez.y,stroke:'#aaa','stroke-width':.8,'marker-end':'url(#arr3d)'});
-  s.append('text').attrs({x:ez.x-6,y:ez.y-8,'text-anchor':'end',fill:'#1D6F4A','font-size':11,'font-family':'IBM Plex Mono'}).text('z = x₁²+x₂²');
-
-  // ── Coral points (Class B) — ABOVE hyperplane, arranged in a ring/arc
-  // Ring centred around (1.4, 1.3) in x1-x2 plane, radius ~1.1
-  const coralAngles = [0, 35, 70, 105, 140, 175, 210, 245, 280, 315];
-  const coralPts = coralAngles.map(a => {
-    const r = 1.05 + (a % 70 === 0 ? 0.1 : 0);
-    const rad = a * Math.PI / 180;
-    return [1.4 + r * Math.cos(rad), 1.3 + r * Math.sin(rad) * 0.6, 3.1];
-  });
-  coralPts.forEach(([wx,wy,wz]) => {
-    const sp = proj(wx, wy, wz);
-    s.append('circle').attrs({cx:sp.x,cy:sp.y,r:9,fill:'#F0997B',stroke:'#993C1D','stroke-width':1.5});
-  });
-
-  // ── Hyperplane — parallelogram between the two groups
-  const hZ = 2.0;
-  const hCorners = [
-    proj(0.0, 0.0, hZ),
-    proj(2.8, 0.0, hZ),
-    proj(2.8, 2.6, hZ),
-    proj(0.0, 2.6, hZ)
-  ];
-  s.append('polygon')
-    .attr('points', hCorners.map(p=>`${p.x},${p.y}`).join(' '))
-    .attrs({fill:'rgba(180,180,160,0.18)',stroke:'#aaa','stroke-width':1,'stroke-dasharray':'6,4'});
-
-  // Decision boundary label
-  const hLabelPt = proj(2.9, 1.3, hZ);
-  s.append('text').attrs({x:hLabelPt.x+6,y:hLabelPt.y-6,fill:'#aaa','font-size':10,'font-family':'IBM Plex Sans','font-style':'italic'})
-    .text('Decision');
-  s.append('text').attrs({x:hLabelPt.x+6,y:hLabelPt.y+8,fill:'#aaa','font-size':10,'font-family':'IBM Plex Sans','font-style':'italic'})
-    .text('boundary');
-
-  // ── Teal points (Class A) — BELOW hyperplane, tight cluster in centre
-  const tealPts = [
-    [1.4, 1.3, 0.9], [1.0, 1.3, 0.9], [1.8, 1.3, 0.9],
-    [1.4, 0.9, 0.9], [1.4, 1.7, 0.9],
-    [1.1, 1.0, 0.9], [1.7, 1.0, 0.9],
-  ];
-  tealPts.forEach(([wx,wy,wz]) => {
-    const sp = proj(wx, wy, wz);
-    s.append('circle').attrs({cx:sp.x,cy:sp.y,r:9,fill:'#5DCAA5',stroke:'#0F6E56','stroke-width':1.5});
-  });
-
-  // "Linearly separable" badge — removed
-})();
-
-// ─── Navigation ───────────────────────────────────────────────────────────────
-const steps = ['step0','step1'];
-const labels = ['Step 1 of 2 — 2D input space','Step 2 of 2 — 3D feature space'];
-const insights = [
-  '',
-  ''
-];
-let cur = 0;
-
-function navigate(dir) {
-  // Deactivate current
-  document.getElementById(steps[cur]).classList.remove('active');
-  document.getElementById('dot' + cur).classList.remove('active');
-
-  cur = Math.max(0, Math.min(steps.length - 1, cur + dir));
-
-  // Activate new
-  document.getElementById(steps[cur]).classList.add('active');
-  document.getElementById('dot' + cur).classList.add('active');
-  document.getElementById('prev-btn').disabled = cur === 0;
-  document.getElementById('next-btn').disabled = cur === steps.length - 1;
+// Physical pixel size
+function resize() {
+  const W = canvas.clientWidth;
+  canvas.width  = W * devicePixelRatio;
+  canvas.height = 460 * devicePixelRatio;
+  draw();
 }
 
+let lift = 0;    // 0–1: how much z is applied
+let rotX = 0;    // degrees
+let rotY = 0;    // degrees
+
+// ─── Rotation matrix ─────────────────────────────────────────────────────────
+function rotatePoint(x, y, z, rx, ry) {
+  const radX = rx * Math.PI / 180;
+  const radY = ry * Math.PI / 180;
+
+  // Rotate around Y axis
+  const x1 =  x * Math.cos(radY) + z * Math.sin(radY);
+  const y1 =  y;
+  const z1 = -x * Math.sin(radY) + z * Math.cos(radY);
+
+  // Rotate around X axis
+  const x2 = x1;
+  const y2 =  y1 * Math.cos(radX) - z1 * Math.sin(radX);
+  const z2 =  y1 * Math.sin(radX) + z1 * Math.cos(radX);
+
+  return { x: x2, y: y2, z: z2 };
+}
+
+// ─── Project 3D → 2D (simple perspective) ────────────────────────────────────
+function project(x, y, z, W, H) {
+  const fov  = 520;
+  const camZ = 6;
+  const scale = fov / (camZ - z);
+  return {
+    sx: W/2 + x * scale,
+    sy: H/2 + y * scale,
+    scale
+  };
+}
+
+// ─── Draw ─────────────────────────────────────────────────────────────────────
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+
+  const dpr = devicePixelRatio;
+
+  // ── Axes ──
+  // When lift=0 & rot=0 → show 2D axes; gradually fade/transform to 3D
+  const axisAlpha = 0.5 + lift * 0.3;
+  ctx.strokeStyle = `rgba(180,175,165,${axisAlpha})`;
+  ctx.lineWidth   = 1 * dpr;
+
+  // Draw 3D axes as rotated lines
+  function drawAxis(x0,y0,z0, x1,y1,z1, label, color) {
+    const wz0 = z0 * lift;
+    const wz1 = z1 * lift;
+    const p0  = rotatePoint(x0, y0, wz0, rotX, rotY);
+    const p1  = rotatePoint(x1, y1, wz1, rotX, rotY);
+    const s0  = project(p0.x, p0.y, p0.z, W, H);
+    const s1  = project(p1.x, p1.y, p1.z, W, H);
+
+    ctx.beginPath();
+    ctx.strokeStyle = color || `rgba(180,175,165,${axisAlpha})`;
+    ctx.lineWidth   = 0.8 * dpr;
+    ctx.setLineDash([]);
+    ctx.moveTo(s0.sx, s0.sy);
+    ctx.lineTo(s1.sx, s1.sy);
+    ctx.stroke();
+
+    // Arrowhead
+    const dx = s1.sx - s0.sx, dy = s1.sy - s0.sy;
+    const len = Math.hypot(dx, dy);
+    if (len > 0) {
+      const ux = dx/len, uy = dy/len;
+      const ah = 8 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(s1.sx, s1.sy);
+      ctx.lineTo(s1.sx - ah*(ux - uy*0.4), s1.sy - ah*(uy + ux*0.4));
+      ctx.lineTo(s1.sx - ah*(ux + uy*0.4), s1.sy - ah*(uy - ux*0.4));
+      ctx.closePath();
+      ctx.fillStyle = color || `rgba(180,175,165,${axisAlpha})`;
+      ctx.fill();
+    }
+
+    // Label
+    ctx.font = `${11*dpr}px IBM Plex Mono`;
+    ctx.fillStyle = color || `rgba(160,155,148,${axisAlpha})`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const lp = rotatePoint(x1*1.12, y1*1.12, wz1*1.12, rotX, rotY);
+    const ls = project(lp.x, lp.y, lp.z, W, H);
+    ctx.fillText(label, ls.sx, ls.sy);
+  }
+
+  // x1 axis
+  drawAxis(-2.5,0,0, 2.5,0,0, 'x₁', `rgba(160,155,148,${axisAlpha})`);
+  // x2 axis
+  drawAxis(0,-2.5,0, 0,2.5,0, 'x₂', `rgba(160,155,148,${axisAlpha})`);
+  // z axis — only visible when lifting
+  if (lift > 0.05) {
+    const zAlpha = lift * 0.9;
+    drawAxis(0,0,0, 0,0,3.5, 'z', `rgba(15,110,86,${zAlpha})`);
+  }
+
+  // ── Hyperplane — only show when lifting ──
+  if (lift > 0.1) {
+    const hZ   = 1.55;  // world z of hyperplane
+    const hAlpha = Math.min(1, (lift - 0.1) / 0.4) * 0.85;
+    // 4 corners of the hyperplane in world space
+    const hCorners2D = [
+      [-1.5, -1.4], [ 1.5, -1.4],
+      [ 1.5,  1.4], [-1.5,  1.4]
+    ];
+    const hScreen = hCorners2D.map(([hx, hy]) => {
+      const wz = hZ * lift;
+      const r  = rotatePoint(hx, hy, wz, rotX, rotY);
+      return project(r.x, r.y, r.z, W, H);
+    });
+
+    ctx.beginPath();
+    ctx.moveTo(hScreen[0].sx, hScreen[0].sy);
+    for (let i = 1; i < hScreen.length; i++)
+      ctx.lineTo(hScreen[i].sx, hScreen[i].sy);
+    ctx.closePath();
+    ctx.fillStyle   = `rgba(180,178,168,${hAlpha * 0.15})`;
+    ctx.strokeStyle = `rgba(150,148,138,${hAlpha * 0.7})`;
+    ctx.lineWidth   = 1 * dpr;
+    ctx.setLineDash([6*dpr, 4*dpr]);
+    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // "Decision boundary" label at right corner
+    const labelCorner = hScreen[1];
+    ctx.font = `italic ${10*dpr}px IBM Plex Sans`;
+    ctx.fillStyle = `rgba(130,128,120,${hAlpha})`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Decision boundary', labelCorner.sx + 8*dpr, labelCorner.sy);
+  }
+
+  // ── Points ──
+  // Sort by z for painter's algorithm
+  const projected = allPts.map(p => {
+    const wz = p.zLift * lift;
+    const r  = rotatePoint(p.x2, p.y2, wz, rotX, rotY);
+    const s  = project(r.x, r.y, r.z, W, H);
+    return { ...p, sx: s.sx, sy: s.sy, depth: r.z };
+  });
+  projected.sort((a,b) => a.depth - b.depth);
+
+  projected.forEach(p => {
+    const r  = 9 * dpr;
+    ctx.beginPath();
+    ctx.arc(p.sx, p.sy, r, 0, Math.PI*2);
+    if (p.cls === 'A') {
+      ctx.fillStyle   = '#5DCAA5';
+      ctx.strokeStyle = '#0F6E56';
+    } else {
+      ctx.fillStyle   = '#F0997B';
+      ctx.strokeStyle = '#993C1D';
+    }
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.fill();
+    ctx.stroke();
+  });
+
+  ctx.restore();
+}
+
+// ─── Slider controls ─────────────────────────────────────────────────────────
+document.getElementById('lift').addEventListener('input', e => {
+  lift = e.target.value / 100;
+  document.getElementById('lift-val').textContent = e.target.value + '%';
+  draw();
+});
+document.getElementById('rx').addEventListener('input', e => {
+  rotX = +e.target.value;
+  document.getElementById('rx-val').textContent = e.target.value + '°';
+  draw();
+});
+document.getElementById('ry').addEventListener('input', e => {
+  rotY = +e.target.value;
+  document.getElementById('ry-val').textContent = e.target.value + '°';
+  draw();
+});
+
+// ─── Drag to rotate ───────────────────────────────────────────────────────────
+let dragging = false, lastX = 0, lastY = 0;
+
+canvas.addEventListener('pointerdown', e => {
+  dragging = true; lastX = e.clientX; lastY = e.clientY;
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const dx = e.clientX - lastX;
+  const dy = e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY;
+  rotY = Math.max(-180, Math.min(180, rotY + dx * 0.5));
+  rotX = Math.max(-90,  Math.min(90,  rotX + dy * 0.5));
+  document.getElementById('rx').value = Math.round(rotX);
+  document.getElementById('ry').value = Math.round(rotY);
+  document.getElementById('rx-val').textContent = Math.round(rotX) + '°';
+  document.getElementById('ry-val').textContent = Math.round(rotY) + '°';
+  draw();
+});
+canvas.addEventListener('pointerup',   () => { dragging = false; });
+canvas.addEventListener('pointerleave',() => { dragging = false; });
+
+// ─── Preset animation ─────────────────────────────────────────────────────────
+let animFrame = null;
+function animateTo(targetLift, targetRX, targetRY) {
+  if (animFrame) cancelAnimationFrame(animFrame);
+
+  const startLift = lift * 100;
+  const startRX   = rotX;
+  const startRY   = rotY;
+  const dur = 900; // ms
+  const t0  = performance.now();
+
+  function ease(t) { return t<.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+  function frame(now) {
+    const t  = Math.min(1, (now - t0) / dur);
+    const et = ease(t);
+
+    lift = (startLift + (targetLift - startLift) * et) / 100;
+    rotX =  startRX  + (targetRX  - startRX)  * et;
+    rotY =  startRY  + (targetRY  - startRY)  * et;
+
+    document.getElementById('lift').value    = Math.round(lift * 100);
+    document.getElementById('rx').value      = Math.round(rotX);
+    document.getElementById('ry').value      = Math.round(rotY);
+    document.getElementById('lift-val').textContent = Math.round(lift*100) + '%';
+    document.getElementById('rx-val').textContent   = Math.round(rotX) + '°';
+    document.getElementById('ry-val').textContent   = Math.round(rotY) + '°';
+
+    draw();
+    if (t < 1) animFrame = requestAnimationFrame(frame);
+  }
+  animFrame = requestAnimationFrame(frame);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', resize);
+resize();
 </script>
 </body>
 </html>

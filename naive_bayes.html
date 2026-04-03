@@ -10,130 +10,691 @@
   :root {
     --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
     --text: #1a1917; --muted: #6b6860;
+    --spam: #e53e3e; --spam-light: #fff5f5; --spam-border: #fc8181;
+    --ham: #1D9E75; --ham-light: #f0fdf4; --ham-border: #6ee7b7;
     --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+    --math: 'Cambria Math', 'Cambria', 'Georgia', serif;
   }
-  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; min-height: 100vh; }
+
   .back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
   .back:hover { color: var(--text); }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 780px; }
-  .card-header { padding: 18px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
-  .card-idx { font-family: var(--mono); font-size: 10px; color: var(--muted); }
-  .card-title { font-size: 14px; font-weight: 600; flex: 1; }
-  .card-tag { font-family: var(--mono); font-size: 10px; background: #eef2e8; color: #1D6F4A; padding: 2px 8px; border-radius: 3px; }
-  .card-body { padding: 24px; overflow-x: auto; }
 
-  /* Naive Bayes component styles */
-  .nb-wrap { font-family: 'IBM Plex Sans', sans-serif; background: #fafaf8; color: #1a1a1a; padding: 20px; border-radius: 10px; border: 1px solid #e8e5de; }
-  .nb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px; }
-  .nb-sec-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #aaa; margin: 0 0 10px; }
-  .prior-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .prior-name { font-family: 'IBM Plex Mono', monospace; font-size: 11px; width: 60px; color: #888; }
-  .bar-track { flex: 1; height: 5px; background: #ece9e2; border-radius: 3px; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 3px; }
-  .bar-pct { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #888; }
+  .explainer {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-left: 4px solid #f59e0b;
+    border-radius: 10px;
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 2rem;
+    font-size: 0.92rem;
+    line-height: 1.7;
+    color: #78350f;
+    max-width: 760px;
+  }
+  .explainer strong { color: #92400e; }
+
+  .layout { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; max-width: 900px; align-items: start; }
+  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+
+  .email-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .email-header {
+    background: #f4f3ef;
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1.1rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .email-body { padding: 1.25rem; }
+
   .word-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-  .word-chip { padding: 6px 14px; border-radius: 6px; border: 1px solid #d4d0c8; background: #fff; cursor: pointer; font-size: 12px; user-select: none; transition: all 0.15s; }
-  .word-chip:hover { background: #f5f3ee; }
-  .word-chip.on-spam { background: #FAECE7; border-color: #D85A30; color: #993C1D; }
-  .word-chip.on-ham  { background: #E8F5EE; border-color: #1D9E75; color: #0d6b50; }
-  .lk-table { border-collapse: collapse; font-size: 11px; width: 100%; }
-  .lk-table th { text-align: left; padding: 4px 10px 4px 0; color: #bbb; font-weight: 500; border-bottom: 1px solid #e8e5de; }
-  .lk-table td { padding: 5px 10px 5px 0; border-bottom: 1px solid #f0ede6; }
-  .math-block { font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #f0ede6; border-radius: 6px; padding: 10px; line-height: 1.8; white-space: pre; overflow-x: auto; }
-  .sc { color: #C04E2C; font-weight: 500; }
-  .hc { color: #1D6F4A; font-weight: 500; }
-  .hl { color: #1a1a1a; font-weight: 600; }
-  .nb-hint { font-size: 11px; color: #aaa; margin-top: 8px; }
+  .word-chip {
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: #fff;
+    font-size: 0.88rem;
+    font-weight: 500;
+    user-select: none;
+    transition: all 0.15s ease;
+  }
+  .word-chip.spam { background: #fff5f5; border-color: var(--spam); color: var(--spam); }
+  .word-chip.ham  { background: var(--ham-light); border-color: var(--ham); color: var(--ham); }
+
+  .email-textarea {
+    width: 100%;
+    min-height: 110px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-family: var(--sans);
+    font-size: 0.92rem;
+    color: var(--text);
+    background: #fafaf8;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+  }
+  .email-textarea:focus { border-color: #a0aec0; background: #fff; }
+  .email-textarea::placeholder { color: #b0ac9e; }
+
+  .detected-section { margin-top: 1rem; }
+  .detected-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 0.5rem; }
+  .detected-empty { font-size: 0.82rem; color: #b0ac9e; font-style: italic; }
+
+  .verdict-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .panel-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .meter-wrap { text-align: center; }
+  .meter-emoji { font-size: 2.5rem; margin-bottom: 0.3rem; transition: all 0.3s; }
+  .meter-label { font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; }
+  .meter-track {
+    height: 16px;
+    background: linear-gradient(to right, var(--ham-light) 0%, var(--spam-light) 100%);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .meter-fill { height: 100%; border-radius: 8px; transition: width 0.5s ease, background 0.5s ease; }
+  .meter-ticks { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
+  .meter-pcts { display: flex; justify-content: space-between; margin-top: 0.6rem; font-size: 0.85rem; font-weight: 700; }
+  .meter-pcts .spam-pct { color: var(--spam); }
+  .meter-pcts .ham-pct  { color: var(--ham); }
+
+  .verdict-badge {
+    text-align: center;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    transition: all 0.3s;
+  }
+  .verdict-badge.spam    { background: var(--spam-light); color: var(--spam); border: 1.5px solid var(--spam-border); }
+  .verdict-badge.ham     { background: var(--ham-light);  color: var(--ham);  border: 1.5px solid var(--ham-border); }
+  .verdict-badge.neutral { background: #f4f3ef; color: var(--muted); border: 1.5px solid var(--border); }
+
+  .verdict-caption { margin-top: 0.6rem; font-size: 0.82rem; color: var(--muted); line-height: 1.5; min-height: 1.2em; }
+
+  .steps-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.4rem 1.5rem;
+    max-width: 900px;
+    margin-top: 1.5rem;
+  }
+  .steps-title { font-size: 0.82rem; font-weight: 700; color: var(--text); margin-bottom: 1.2rem; }
+
+  .thought-bubble {
+    position: relative;
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.6rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    border: 1px solid transparent;
+    animation: popIn 0.25s ease;
+  }
+  .thought-bubble.neutral      { background: #f4f3ef; border-color: #e8e5de; color: #4a4845; }
+  .thought-bubble.spammy       { background: #fff5f5; border-color: #fecaca; color: #7f1d1d; }
+  .thought-bubble.safe         { background: #f0fdf4; border-color: #bbf7d0; color: #14532d; }
+  .thought-bubble.verdict-spam { background: #fee2e2; border-color: var(--spam); color: #7f1d1d; border-width: 2px; }
+  .thought-bubble.verdict-ham  { background: #dcfce7; border-color: var(--ham);  color: #14532d; border-width: 2px; }
+
+  .mini-bar-wrap { margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: #888; }
+  .mini-bar-track { flex: 1; height: 6px; background: #e8e5de; border-radius: 3px; overflow: hidden; }
+  .mini-bar-fill  { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+
+  #steps-placeholder { color: var(--muted); font-size: 0.88rem; font-style: italic; text-align: center; padding: 1.5rem 0; }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.97) translateY(3px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* ── Under the Hood Math ────────────────────────────────── */
+  .math-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.4rem 1.5rem;
+    max-width: 900px;
+    margin-top: 1.5rem;
+  }
+  .math-box-title { font-family: var(--sans); font-size: 0.82rem; font-weight: 700; color: var(--text); margin-bottom: 1.2rem; }
+
+  .math-formula-main {
+    font-family: var(--math);
+    font-size: 1rem;
+    background: #f4f3ef;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    color: #2a2825;
+    line-height: 2.4;
+    overflow-x: auto;
+  }
+  .math-fraction {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 0.25em;
+    font-size: 0.92em;
+  }
+  .math-fraction .num { border-bottom: 1.5px solid currentColor; padding-bottom: 3px; white-space: nowrap; }
+  .math-fraction .den { padding-top: 3px; white-space: nowrap; }
+
+  .math-highlight {
+    transition: background 0.35s, color 0.35s;
+    border-radius: 3px;
+    padding: 1px 3px;
+    font-weight: 600;
+  }
+  .math-highlight.hl-spam { background: #fee2e2; color: var(--spam); }
+  .math-highlight.hl-ham  { background: #dcfce7; color: var(--ham); }
+
+  /* Probability table */
+  .prob-table-wrap { overflow-x: auto; margin-bottom: 1rem; }
+  .prob-table { width: 100%; border-collapse: collapse; font-family: var(--math); font-size: 0.88rem; }
+  .prob-table th {
+    font-family: var(--sans); font-size: 0.72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+    background: #f4f3ef; padding: 0.5rem 0.85rem; text-align: left;
+    border-bottom: 2px solid var(--border);
+  }
+  .prob-table td { padding: 0.48rem 0.85rem; border-bottom: 1px solid #ede9df; transition: background 0.3s; vertical-align: middle; }
+  .prob-table tr.row-active-spam td { background: #fff5f5; }
+  .prob-table tr.row-active-ham  td { background: #f0fdf4; }
+  .prob-table .td-word { font-weight: 600; color: var(--text); font-family: var(--sans); }
+  .prob-table .td-spam { color: var(--spam); font-weight: 600; }
+  .prob-table .td-ham  { color: var(--ham);  font-weight: 600; }
+  .prob-table .td-ratio { font-size: 0.82rem; color: var(--muted); }
+  .ratio-bar-wrap { display: flex; height: 7px; border-radius: 4px; overflow: hidden; width: 90px; }
+  .ratio-bar-spam { background: var(--spam); }
+  .ratio-bar-ham  { background: var(--ham); }
+
+  /* Running computation */
+  .math-running-label { font-family: var(--sans); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.4rem; }
+  .math-running {
+    background: #fafaf8;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-family: var(--math);
+    font-size: 0.92rem;
+    line-height: 2.1;
+    color: #2a2825;
+    overflow-x: auto;
+  }
+  .math-eq-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.1rem; }
+  .math-eq-label { font-family: var(--sans); font-size: 0.78rem; color: var(--muted); min-width: 80px; }
+  .math-times { color: var(--muted); }
+  .math-result-final { margin-top: 0.5rem; padding-top: 0.6rem; border-top: 1px solid var(--border); font-size: 1rem; }
 </style>
 </head>
 <body>
+
 <a class="back" href="index.html">← Back to all visualizations</a>
-<div class="card">
-  <div class="card-header">
-    <span class="card-idx">02</span>
-    <span class="card-title">Naive Bayes — Spam Classifier</span>
-    <span class="card-tag">Module 8G</span>
-  </div>
-  <div class="card-body">
-    <div class="nb-wrap">
-      <p class="nb-sec-label">Naive Bayes — Spam detector</p>
-      <div class="nb-grid">
-        <div>
-          <p class="nb-sec-label">Prior probability</p>
-          <div class="prior-row">
-            <span class="prior-name">P(spam)</span>
-            <div class="bar-track"><div class="bar-fill" style="width:40%;background:#D85A30"></div></div>
-            <span class="bar-pct">0.40</span>
-          </div>
-          <div class="prior-row">
-            <span class="prior-name">P(ham)</span>
-            <div class="bar-track"><div class="bar-fill" style="width:60%;background:#1D9E75"></div></div>
-            <span class="bar-pct">0.60</span>
-          </div>
-          <p class="nb-sec-label" style="margin-top:16px">Word likelihood</p>
-          <table class="lk-table">
-            <tr><th>Word</th><th style="color:#C04E2C">P(·|spam)</th><th style="color:#1D6F4A">P(·|ham)</th></tr>
-            <tr><td>free</td><td>0.80</td><td>0.05</td></tr>
-            <tr><td>click</td><td>0.70</td><td>0.10</td></tr>
-            <tr><td>meeting</td><td>0.05</td><td>0.60</td></tr>
-            <tr><td>report</td><td>0.03</td><td>0.55</td></tr>
-          </table>
-        </div>
-        <div>
-          <p class="nb-sec-label">Select words in email</p>
-          <div class="word-chips">
-            <div class="word-chip" data-word="free">free</div>
-            <div class="word-chip" data-word="click">click</div>
-            <div class="word-chip" data-word="meeting">meeting</div>
-            <div class="word-chip" data-word="report">report</div>
-          </div>
-          <p class="nb-hint">Click words to include them</p>
+
+<div class="explainer">
+  <strong>How does it work?</strong><br>
+  The AI has seen thousands of emails before. It learned that certain words (like <em>"FREE"</em> or <em>"winner"</em>) appear much more often in spam, while others (like <em>"meeting"</em> or <em>"report"</em>) are normal. When it sees a new email, it looks at each word and asks: <em>"Does this word make it more or less suspicious?"</em> — then combines all the clues to make a final decision.
+</div>
+
+<div class="layout">
+  <!-- Left: email input -->
+  <div class="email-box">
+    <div class="email-header">Type your email message below</div>
+    <div class="email-body">
+      <textarea
+        class="email-textarea"
+        id="emailInput"
+        placeholder="e.g. You are the winner of a FREE prize! Click here to claim your limited offer now..."
+        spellcheck="false"
+      ></textarea>
+
+      <div class="detected-section">
+        <p class="detected-label">Clue words detected in your email</p>
+        <div class="word-chips" id="chips">
+          <span class="detected-empty" id="hint-text">Start typing to detect clue words…</span>
         </div>
       </div>
-      <p class="nb-sec-label">Bayes computation</p>
-      <div class="math-block" id="nb-math">Select words above to see the computation.</div>
+
+      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+        <p class="detected-label" style="margin-bottom:0.4rem;">All known clue words</p>
+        <div id="all-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: verdict -->
+  <div class="verdict-panel">
+    <div>
+      <p class="panel-label">Spam-O-Meter</p>
+      <div class="meter-wrap">
+        <div class="meter-emoji" id="meter-emoji">🤔</div>
+        <div class="meter-label" id="meter-label">Waiting for clues...</div>
+        <div class="meter-track">
+          <div class="meter-fill" id="meter-fill" style="width:40%;background:#9ca3af;"></div>
+        </div>
+        <div class="meter-ticks">
+          <span>Safe</span>
+          <span>Spam</span>
+        </div>
+        <div class="meter-pcts">
+          <span class="ham-pct" id="ham-pct">–</span>
+          <span class="spam-pct" id="spam-pct">–</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="panel-label">AI Verdict</p>
+      <div class="verdict-badge neutral" id="verdict-badge">Type your email above to get a verdict</div>
+      <div class="verdict-caption" id="verdict-caption"></div>
+    </div>
+
+    <div>
+      <p class="panel-label">Starting assumption</p>
+      <div style="font-size:0.85rem;color:var(--muted);line-height:1.6;">
+        Before seeing any words, the AI thinks:<br>
+        <strong style="color:var(--spam);">40%</strong> chance it's spam &nbsp;·&nbsp;
+        <strong style="color:var(--ham);">60%</strong> chance it's normal.<br>
+        <span style="font-size:0.78rem;">(Based on past emails it has seen.)</span>
+      </div>
     </div>
   </div>
 </div>
 
-<script>
-(function() {
-  const PRIOR = { spam: 0.40, ham: 0.60 };
-  const LK = {
-    free:    { spam: 0.80, ham: 0.05 },
-    click:   { spam: 0.70, ham: 0.10 },
-    meeting: { spam: 0.05, ham: 0.60 },
-    report:  { spam: 0.03, ham: 0.55 }
-  };
-  const active = new Set();
-  const mb = document.getElementById("nb-math");
+<!-- Step-by-step reasoning -->
+<div class="steps-box">
+  <p class="steps-title">What's going through the AI's head...</p>
+  <div id="steps-list">
+    <div id="steps-placeholder">Type an email above to see the AI's reasoning appear here.</div>
+  </div>
+</div>
 
-  function update() {
-    const words = Array.from(active);
-    if (!words.length) { mb.innerHTML = "Select words above to see the computation."; return; }
-    const raw = v => v.toFixed(4);
-    const pct = v => (v * 100).toFixed(1) + "%";
-    let s = PRIOR.spam, h = PRIOR.ham;
-    words.forEach(w => { s *= LK[w].spam; h *= LK[w].ham; });
-    const total = s + h, ps = s / total, ph = h / total;
-    const st = [PRIOR.spam.toFixed(2), ...words.map(w => LK[w].spam.toFixed(2))].join(" × ");
-    const ht = [PRIOR.ham.toFixed(2),  ...words.map(w => LK[w].ham.toFixed(2))].join(" × ");
-    mb.innerHTML =
-      `<span class="sc">score(spam)</span>  = ${st} = <span class="hl">${raw(s)}</span>\n` +
-      `<span class="hc">score(ham)</span>   = ${ht} = <span class="hl">${raw(h)}</span>\n\n` +
-      `total         = ${raw(s)} + ${raw(h)} = <span class="hl">${raw(total)}</span>\n\n` +
-      `<span class="sc">P(spam|email)</span>  = ${raw(s)} / ${raw(total)} = <span class="hl">${pct(ps)}</span>\n` +
-      `<span class="hc">P(ham|email)</span>   = ${raw(h)} / ${raw(total)} = <span class="hl">${pct(ph)}</span>`;
+<!-- Under the Hood Math -->
+<div class="math-box">
+  <p class="math-box-title">Under the hood math</p>
+
+  <!-- Live Bayes formula -->
+  <div class="math-formula-main" id="math-formula-display">
+    <span style="color:var(--muted);font-family:var(--sans);font-size:0.88rem;">Type an email to see the live Bayes calculation.</span>
+  </div>
+
+  <!-- Probability table for all words -->
+  <div class="prob-table-wrap">
+    <table class="prob-table" id="prob-table">
+      <thead>
+        <tr>
+          <th>Word</th>
+          <th>P(word | spam)</th>
+          <th>P(word | ham)</th>
+          <th>Spam/Ham ratio</th>
+          <th>Balance</th>
+        </tr>
+      </thead>
+      <tbody id="prob-table-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Live numeric computation -->
+  <div id="math-running-wrap" style="display:none;">
+    <div class="math-running-label">Live computation — words detected in your email</div>
+    <div class="math-running" id="math-running-content"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const WORDS = [
+    { word: "free",          spam: 0.82, ham: 0.04 },
+    { word: "winner",        spam: 0.78, ham: 0.03 },
+    { word: "click here",    spam: 0.74, ham: 0.08 },
+    { word: "limited offer", spam: 0.70, ham: 0.05 },
+    { word: "claim",         spam: 0.68, ham: 0.06 },
+    { word: "prize",         spam: 0.75, ham: 0.04 },
+    { word: "urgent",        spam: 0.65, ham: 0.10 },
+    { word: "password",      spam: 0.45, ham: 0.20 },
+    { word: "account",       spam: 0.40, ham: 0.35 },
+    { word: "invoice",       spam: 0.12, ham: 0.50 },
+    { word: "meeting",       spam: 0.05, ham: 0.65 },
+    { word: "report",        spam: 0.03, ham: 0.60 },
+    { word: "regards",       spam: 0.04, ham: 0.55 },
+    { word: "attached",      spam: 0.08, ham: 0.52 },
+    { word: "deadline",      spam: 0.10, ham: 0.48 },
+  ];
+
+  const PRIOR = { spam: 0.40, ham: 0.60 };
+
+  // ── Probability table ──────────────────────────────────────────
+  const tbodyEl = document.getElementById('prob-table-body');
+  WORDS.forEach(({ word, spam, ham }) => {
+    const tr = document.createElement('tr');
+    tr.id = 'row-' + word.replace(/\s+/g, '-');
+    const total = spam + ham;
+    const spamW = Math.round(spam / total * 100);
+    const hamW  = Math.round(ham  / total * 100);
+    tr.innerHTML = `
+      <td class="td-word">${word}</td>
+      <td class="td-spam">${(spam*100).toFixed(0)} / 100</td>
+      <td class="td-ham">${(ham*100).toFixed(0)} / 100</td>
+      <td class="td-ratio">${(spam/ham).toFixed(2)}×</td>
+      <td>
+        <div class="ratio-bar-wrap">
+          <div class="ratio-bar-spam" style="width:${spamW}%"></div>
+          <div class="ratio-bar-ham"  style="width:${hamW}%"></div>
+        </div>
+      </td>`;
+    tbodyEl.appendChild(tr);
+  });
+
+  // ── All-words reference chips ──────────────────────────────────
+  const allChipsEl = document.getElementById('all-chips');
+  WORDS.forEach(({ word, spam, ham }) => {
+    const chip = document.createElement('span');
+    const isSpammy = spam > ham;
+    chip.style.cssText = `
+      display:inline-block; padding:3px 10px; border-radius:20px; font-size:0.76rem; font-weight:600;
+      border:1px solid; cursor:default;
+      ${isSpammy
+        ? 'background:#fff5f5;color:var(--spam);border-color:var(--spam-border);'
+        : 'background:var(--ham-light);color:var(--ham);border-color:var(--ham-border);'}
+    `;
+    chip.textContent = word;
+    allChipsEl.appendChild(chip);
+  });
+
+  // ── Word detection ─────────────────────────────────────────────
+  function detectWords(text) {
+    const lower = text.toLowerCase();
+    const found = new Set();
+    [...WORDS].sort((a, b) => b.word.length - a.word.length).forEach(({ word }) => {
+      if (lower.includes(word)) found.add(word);
+    });
+    return found;
   }
 
-  document.querySelectorAll(".word-chip").forEach(chip => {
-    chip.addEventListener("click", () => {
-      const w = chip.dataset.word;
-      if (active.has(w)) { active.delete(w); chip.classList.remove("on-spam", "on-ham"); }
-      else { active.add(w); chip.classList.add(LK[w].spam > LK[w].ham ? "on-spam" : "on-ham"); }
-      update();
-    });
+  // ── Textarea listener ──────────────────────────────────────────
+  const inputEl = document.getElementById('emailInput');
+  let debounce;
+  inputEl.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      const found = detectWords(inputEl.value);
+      renderChips(found);
+      update(found);
+      updateMath(found);
+    }, 150);
   });
+
+  function renderChips(found) {
+    const chipsEl = document.getElementById('chips');
+    if (found.size === 0) {
+      chipsEl.innerHTML = `<span class="detected-empty" id="hint-text">${
+        inputEl.value.trim()
+          ? 'No clue words detected yet — try words like "free", "winner", "meeting"…'
+          : 'Start typing to detect clue words…'
+      }</span>`;
+      return;
+    }
+    chipsEl.innerHTML = '';
+    found.forEach(word => {
+      const d = WORDS.find(w => w.word === word);
+      const chip = document.createElement('div');
+      chip.className = 'word-chip ' + (d.spam > d.ham ? 'spam' : 'ham');
+      chip.textContent = word;
+      chipsEl.appendChild(chip);
+    });
+  }
+
+  function update(active) {
+    const words = Array.from(active);
+    const stepsEl = document.getElementById('steps-list');
+
+    if (!words.length) {
+      document.getElementById('meter-fill').style.cssText = 'width:40%;background:#9ca3af;';
+      document.getElementById('meter-emoji').textContent = '🤔';
+      document.getElementById('meter-label').textContent = 'Waiting for clues...';
+      document.getElementById('spam-pct').textContent = '–';
+      document.getElementById('ham-pct').textContent = '–';
+      const badge = document.getElementById('verdict-badge');
+      badge.textContent = 'Type your email above to get a verdict';
+      badge.className = 'verdict-badge neutral';
+      document.getElementById('verdict-caption').textContent = '';
+      stepsEl.innerHTML = `<div id="steps-placeholder">Type an email above to see the AI's reasoning appear here.</div>`;
+      return;
+    }
+
+    let s = PRIOR.spam, h = PRIOR.ham;
+    const wordData = words.map(w => WORDS.find(d => d.word === w));
+    wordData.forEach(d => { s *= d.spam; h *= d.ham; });
+    const ps = s / (s + h);
+    const ph = h / (s + h);
+
+    const meterFill = document.getElementById('meter-fill');
+    meterFill.style.width = (ps * 100).toFixed(1) + '%';
+    meterFill.style.background = ps > 0.7 ? '#e53e3e' : ps > 0.4 ? '#f59e0b' : '#1D9E75';
+
+    document.getElementById('spam-pct').textContent = (ps * 100).toFixed(0) + '% spam';
+    document.getElementById('ham-pct').textContent  = (ph * 100).toFixed(0) + '% normal';
+
+    const emojiEl = document.getElementById('meter-emoji');
+    const labelEl = document.getElementById('meter-label');
+    if (ps >= 0.80)      { emojiEl.textContent = '🚨'; labelEl.textContent = 'Very likely SPAM!'; }
+    else if (ps >= 0.55) { emojiEl.textContent = '😬'; labelEl.textContent = 'Probably spam…'; }
+    else if (ps >= 0.40) { emojiEl.textContent = '🤔'; labelEl.textContent = 'Uncertain — could go either way'; }
+    else if (ps >= 0.20) { emojiEl.textContent = '🙂'; labelEl.textContent = 'Probably normal'; }
+    else                 { emojiEl.textContent = '✅'; labelEl.textContent = 'Looks safe!'; }
+
+    const badge     = document.getElementById('verdict-badge');
+    const captionEl = document.getElementById('verdict-caption');
+    const spamWords = wordData.filter(d => d.spam > d.ham).map(d => `"${d.word}"`);
+    const safeWords = wordData.filter(d => d.ham >= d.spam).map(d => `"${d.word}"`);
+
+    if (ps >= 0.55) {
+      badge.textContent = 'Spam';
+      badge.className = 'verdict-badge spam';
+      captionEl.textContent = spamWords.slice(0,2).length
+        ? `Words like ${spamWords.slice(0,2).join(' and ')} suggest a spam email.`
+        : 'The overall pattern suggests a spam email.';
+    } else {
+      badge.textContent = 'Not Spam';
+      badge.className = 'verdict-badge ham';
+      captionEl.textContent = safeWords.slice(0,2).length
+        ? `Words like ${safeWords.slice(0,2).join(' and ')} suggest a normal email.`
+        : 'The overall pattern suggests a normal email.';
+    }
+
+    // ── Step-by-step narrative ─────────────────────────────────
+    let runS = PRIOR.spam, runH = PRIOR.ham;
+
+    function miniBar(pct) {
+      const color = pct > 0.65 ? '#e53e3e' : pct > 0.42 ? '#f59e0b' : '#1D9E75';
+      return `<div class="mini-bar-wrap">
+        <span>suspicion</span>
+        <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${(pct*100).toFixed(0)}%;background:${color};"></div></div>
+        <span style="font-weight:700;color:${color};">${(pct*100).toFixed(0)}%</span>
+      </div>`;
+    }
+
+    function spammyPhrase(word, spamPct, hamPct, prevPct, nowPct) {
+      const big = spamPct >= 70;
+      const openings = big
+        ? [`Whoa — <strong>"${word}"</strong> is a massive red flag.`, `Uh oh. <strong>"${word}"</strong> is one of the most common spam words out there.`]
+        : [`Hmm, <strong>"${word}"</strong> is a bit suspicious.`, `<strong>"${word}"</strong> raises an eyebrow.`];
+      const body = `Out of every 100 spam emails, ${spamPct} contain this word. There are only ${hamPct} normal emails out of 100 that use this word`;
+      const shift = `Suspicion goes from ${(prevPct*100).toFixed(0)}% up to <strong>${(nowPct*100).toFixed(0)}%</strong>.`;
+      return openings[Math.floor(Math.random() * openings.length)] + ' ' + body + ' ' + shift;
+    }
+
+    function safePhrase(word, spamPct, hamPct, prevPct, nowPct) {
+      const strong = hamPct >= 55;
+      const openings = strong
+        ? [`Good sign — <strong>"${word}"</strong> is something real people actually write.`, `<strong>"${word}"</strong>? That's very normal email language.`]
+        : [`<strong>"${word}"</strong> leans toward a normal email.`, `Seeing <strong>"${word}"</strong> makes this feel less suspicious.`];
+      const body = `Out of every 100 spam emails, only ${spamPct} use this word. There are ${hamPct} normal emails out of 100 that use this word`;
+      const shift = `Suspicion drops from ${(prevPct*100).toFixed(0)}% down to <strong>${(nowPct*100).toFixed(0)}%</strong>.`;
+      return openings[Math.floor(Math.random() * openings.length)] + ' ' + body + ' ' + shift;
+    }
+
+    function neutralPhrase(word, spamPct, hamPct, prevPct, nowPct) {
+      return `<strong>"${word}"</strong> could go either way — out of every 100 spam emails, ${spamPct} use it. There are ${hamPct} normal emails out of 100 that use this word. Doesn't tell me much. Suspicion stays around <strong>${(nowPct*100).toFixed(0)}%</strong>.`;
+    }
+
+    let html = `<div class="thought-bubble neutral">
+      Alright, a new email just came in. Before I even read it, I already have a rough idea — based on everything I've seen before, about <strong>40% of emails turn out to be spam</strong> and 60% are normal. So I'll start there and update my suspicion as I read each word.
+      ${miniBar(0.40)}
+    </div>`;
+
+    wordData.forEach(d => {
+      const prevS = runS, prevH = runH;
+      runS *= d.spam; runH *= d.ham;
+      const prevPct = prevS / (prevS + prevH);
+      const nowPct  = runS  / (runS  + runH);
+      const delta   = nowPct - prevPct;
+      const spamPct = (d.spam * 100).toFixed(0);
+      const hamPct  = (d.ham  * 100).toFixed(0);
+      const isNeutral = Math.abs(delta) <= 0.03;
+      const isSpammy  = d.spam > d.ham;
+
+      let type, text;
+      if (isNeutral)      { type = 'neutral'; text = neutralPhrase(d.word, spamPct, hamPct, prevPct, nowPct); }
+      else if (isSpammy)  { type = 'spammy';  text = spammyPhrase(d.word, spamPct, hamPct, prevPct, nowPct); }
+      else                { type = 'safe';    text = safePhrase(d.word, spamPct, hamPct, prevPct, nowPct); }
+
+      html += `<div class="thought-bubble ${type}">${text}${miniBar(nowPct)}</div>`;
+    });
+
+    stepsEl.innerHTML = html;
+  }
+
+  // ── Under the Hood Math ────────────────────────────────────────
+  function fmtSci(n) {
+    if (n === 0) return '0';
+    const exp = Math.floor(Math.log10(Math.abs(n)));
+    if (exp >= -2 && exp <= 2) return n.toPrecision(4);
+    const coeff = (n / Math.pow(10, exp)).toFixed(3);
+    return `${coeff} × 10<sup>${exp}</sup>`;
+  }
+
+  function updateMath(active) {
+    const words = Array.from(active);
+    const formulaEl    = document.getElementById('math-formula-display');
+    const runningWrap  = document.getElementById('math-running-wrap');
+    const runningEl    = document.getElementById('math-running-content');
+
+    // Highlight rows
+    WORDS.forEach(({ word }) => {
+      const row = document.getElementById('row-' + word.replace(/\s+/g, '-'));
+      if (!row) return;
+      row.classList.remove('row-active-spam', 'row-active-ham');
+      if (active.has(word)) {
+        const d = WORDS.find(w => w.word === word);
+        row.classList.add(d.spam > d.ham ? 'row-active-spam' : 'row-active-ham');
+      }
+    });
+
+    if (words.length === 0) {
+      formulaEl.innerHTML = `<span style="color:var(--muted);font-family:var(--sans);font-size:0.88rem;">Type an email to see the live Bayes calculation.</span>`;
+      runningWrap.style.display = 'none';
+      return;
+    }
+
+    const wordData = words.map(w => WORDS.find(d => d.word === w));
+
+    // ── Symbolic Bayes formula with highlighted terms ────────────
+    const spamTerms = wordData.map(d =>
+      `<span class="math-highlight hl-spam">P("${d.word}" | spam)</span>`
+    ).join(' · ');
+    const hamTerms = wordData.map(d =>
+      `<span class="math-highlight hl-ham">P("${d.word}" | ham)</span>`
+    ).join(' · ');
+
+    formulaEl.innerHTML = `
+      <div style="margin-bottom:0.5rem;font-size:0.82rem;font-family:var(--sans);color:var(--muted);">Bayes' theorem applied to your email:</div>
+      P(spam | email) =
+      <span class="math-fraction">
+        <span class="num"><span style="color:var(--spam);font-weight:700;">P(spam)</span> · ${spamTerms}</span>
+        <span class="den"><span style="color:var(--spam);font-weight:700;">P(spam)</span> · ${spamTerms} &nbsp;+&nbsp; <span style="color:var(--ham);font-weight:700;">P(ham)</span> · ${hamTerms}</span>
+      </span>
+    `;
+
+    // ── Numeric step-by-step computation ────────────────────────
+    let runS = PRIOR.spam, runH = PRIOR.ham;
+    let spamTermsNum = `<span style="color:var(--spam);font-weight:700;">${PRIOR.spam.toFixed(2)}</span>`;
+    let hamTermsNum  = `<span style="color:var(--ham);font-weight:700;">${PRIOR.ham.toFixed(2)}</span>`;
+
+    wordData.forEach(d => {
+      runS *= d.spam; runH *= d.ham;
+      spamTermsNum += ` <span class="math-times">×</span> <span class="math-highlight hl-spam">${d.spam.toFixed(2)}</span>`;
+      hamTermsNum  += ` <span class="math-times">×</span> <span class="math-highlight hl-ham">${d.ham.toFixed(2)}</span>`;
+    });
+
+    const ps = runS / (runS + runH);
+    const verdictColor = ps >= 0.55 ? 'var(--spam)' : 'var(--ham)';
+    const verdictLabel = ps >= 0.55 ? 'SPAM' : 'NOT SPAM';
+
+    runningEl.innerHTML = `
+      <div class="math-eq-row">
+        <span class="math-eq-label" style="color:var(--spam);">Score(spam)</span>
+        <span>=</span>
+        <span>${spamTermsNum}</span>
+        <span style="color:var(--muted);">=</span>
+        <span style="color:var(--spam);font-weight:700;">${fmtSci(runS)}</span>
+      </div>
+      <div class="math-eq-row">
+        <span class="math-eq-label" style="color:var(--ham);">Score(ham)</span>
+        <span>=</span>
+        <span>${hamTermsNum}</span>
+        <span style="color:var(--muted);">=</span>
+        <span style="color:var(--ham);font-weight:700;">${fmtSci(runH)}</span>
+      </div>
+      <div class="math-eq-row math-result-final">
+        <span class="math-eq-label">P(spam | email)</span>
+        <span>=</span>
+        <span class="math-fraction" style="font-size:0.9em;">
+          <span class="num">${fmtSci(runS)}</span>
+          <span class="den">${fmtSci(runS)} + ${fmtSci(runH)}</span>
+        </span>
+        <span>=</span>
+        <span style="color:${verdictColor};font-weight:700;font-size:1.15rem;">${(ps*100).toFixed(1)}%</span>
+        <span style="color:var(--muted);font-size:0.82rem;margin-left:0.4rem;">→ <strong style="color:${verdictColor};">${verdictLabel}</strong></span>
+      </div>
+    `;
+
+    runningWrap.style.display = 'block';
+  }
+
+  // Init
+  update(new Set());
+  updateMath(new Set());
 })();
 </script>
 </body>
