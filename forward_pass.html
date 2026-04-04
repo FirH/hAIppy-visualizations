@@ -1,489 +1,669 @@
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:sans-serif;color:#222}
-.intro-block{margin-bottom:12px;padding:12px 14px;background:#f8f7ff;border-left:3px solid #534AB7;border-radius:0 8px 8px 0;font-size:14px;line-height:1.7;color:#333}
-.intro-block b{color:#534AB7}
-.lbl-input{display:inline-block;background:#e8e6ff;color:#3d35a0;border-radius:4px;padding:1px 7px;font-size:13px;font-weight:600;margin:0 2px}
-.lbl-hidden{display:inline-block;background:#d4eddf;color:#155a35;border-radius:4px;padding:1px 7px;font-size:13px;font-weight:600;margin:0 2px}
-.lbl-output{display:inline-block;background:#fde8e1;color:#9b3a1e;border-radius:4px;padding:1px 7px;font-size:13px;font-weight:600;margin:0 2px}
-.ctrl-guide{font-size:13px;color:#555;line-height:1.9;margin-top:8px}
-.ctrl-guide code{background:#eee;border-radius:4px;padding:1px 6px;font-family:monospace;font-size:12px}
-.root{display:grid;grid-template-columns:1fr 265px;gap:12px}
-.canvas-wrap{width:100%}
+.intro{padding:11px 14px;background:#f8f7ff;border-left:3px solid #534AB7;border-radius:0 8px 8px 0;font-size:16px;line-height:1.7;color:#333;margin-bottom:10px}
+.intro b{color:#534AB7}
+.pill{display:inline-block;border-radius:4px;padding:1px 7px;font-size:12px;font-weight:600;margin:0 2px}
+.pill-i{background:#e8e6ff;color:#3d35a0}
+.pill-h{background:#d4eddf;color:#155a35}
+.pill-o{background:#fde8e1;color:#9b3a1e}
+.root{display:grid;grid-template-columns:1fr 265px;gap:12px;font-family:sans-serif;color:#222}
+.main{min-width:0}
 #cv{display:block;width:100%;border-radius:10px;border:1px solid #ddd;background:#fff}
-.sidebar{display:flex;flex-direction:column;gap:9px}
-.card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:10px}
-.card-title{font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;display:flex;align-items:center;justify-content:space-between}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{font-size:11px;font-weight:600;color:#555;padding:3px 4px;text-align:center;border-bottom:1px solid #eee}
-td{padding:2px 3px;text-align:center;color:#555}
-td:first-child{text-align:left;font-weight:600;color:#222;font-size:11px}
-td input[type=number]{width:50px;font-size:11px;font-family:monospace;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:2px 4px;color:#222;text-align:center}
-td input[type=number]:focus{outline:none;border-color:#534AB7}
-.bias-inp{width:50px;font-size:11px;font-family:monospace;background:#eee;border:1px solid #ddd;border-radius:4px;padding:2px 4px;color:#222;text-align:center}
-.ctrl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
-.ctrl input[type=range]{accent-color:#534AB7;width:68px}
-.ctrl label{font-size:11px;color:#555;font-family:monospace}
-.ctrl .bv{font-size:11px;font-family:monospace;color:#222;min-width:30px}
-button{font-size:11px;padding:3px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;color:#222;cursor:pointer}
-button:hover{background:#f0f0f0}
-.btn-go{background:#534AB7;color:#fff;border-color:#534AB7}
-.btn-go:hover{background:#3d3789}
-.btn-sm{font-size:10px;padding:2px 7px;border-radius:4px}
+.topbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:7px}
+.topbar label{font-size:11px;color:#666;font-family:monospace}
+.topbar input[type=range]{accent-color:#534AB7;width:68px}
+.topbar .bv{font-size:11px;font-family:monospace;color:#222;min-width:28px}
+.tbtn{font-size:11px;padding:3px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;color:#222;cursor:pointer}
+.tbtn:hover{background:#f0f0f0}
+.tbtn.go{background:#534AB7;color:#fff;border-color:#534AB7}
+.tbtn.go:hover{background:#3d3789}
 .dots{display:flex;gap:4px;align-items:center}
 .dot{width:7px;height:7px;border-radius:50%;background:#ccc;cursor:pointer;transition:background .2s}
-.dot.on{background:#534AB7}
-.act-row{display:flex;gap:4px;flex-wrap:wrap}
-.act-btn{font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid #ccc;background:#fff;color:#555;cursor:pointer;transition:all .15s}
-.act-btn.sel{background:#534AB7;color:#fff;border-color:#534AB7}
-.sz-row{display:flex;align-items:center;gap:7px}
-.trace-box{background:#fafafa;border:1px solid #e8e8e8;border-radius:8px;padding:10px 12px;margin-top:10px;font-family:monospace;font-size:12px;line-height:2;color:#333}
-.trace-title{font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-family:sans-serif}
-.trace-line{padding:1px 6px;border-radius:4px;transition:background .2s,border-color .2s}
-.trace-line.active{color:#111;border-left:2px solid #534AB7;padding-left:6px;background:#f0eeff}
-.pred-box{margin-top:10px;text-align:center;padding:12px;background:#fff;border:1px solid #ddd;border-radius:8px}
-.pred-label{font-size:12px;color:#888;margin-bottom:2px}
-.pred-val{font-size:30px;font-weight:600}
-.pred-cls{font-size:13px;margin-top:3px}
+.dot.done{background:#a0c4ff}
+.dot.on{background:#534AB7;transform:scale(1.3)}
+.explain{margin-top:8px;padding:9px 13px;font-size:13px;line-height:1.65;color:#444;border-radius:0 8px 8px 0;border:1px solid #fde68a;border-left:3px solid #f59e0b;background:#fffbf0;min-height:42px}
+.explain.h{background:#f8f7ff;border-color:#c7d2fe;border-left-color:#534AB7}
+.explain.o{background:#f0fff4;border-color:#a7f3d0;border-left-color:#1D6F4A}
+.trace{background:#fafafa;border:1px solid #e8e8e8;border-radius:8px;padding:9px 12px;margin-top:8px;font-family:monospace;font-size:14px;color:#666}
+.trtitle{font-size:14px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;font-family:sans-serif;display:flex;align-items:center;justify-content:space-between}
+.trgroup{margin-bottom:6px}
+.trgroup-lbl{font-size:14px;font-weight:600;color:#999;font-family:sans-serif;margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em}
+.trline{padding:2px 5px;border-radius:3px;line-height:1.7}
+.trline.on{color:#111;border-left:2px solid #534AB7;padding-left:5px;background:#f0eeff}
+.pred{margin-top:8px;text-align:center;padding:10px;background:#fff;border:1px solid #ddd;border-radius:8px}
+.pred-lbl{font-size:11px;color:#999;margin-bottom:2px}
+.pred-val{font-size:28px;font-weight:600}
+.pred-cls{font-size:12px;margin-top:2px}
+.sidebar{display:flex;flex-direction:column;gap:9px}
+.card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:10px}
+#wTables{overflow-x:auto}
+#wTables table{min-width:max-content}
+.ctitle{font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;display:flex;align-items:center;justify-content:space-between}
+.arow{display:flex;gap:4px;flex-wrap:wrap}
+.abtn{font-size:11px;padding:3px 8px;border-radius:12px;border:1px solid #ccc;background:#fff;color:#555;cursor:pointer;transition:all .15s}
+.abtn.sel{background:#534AB7;color:#fff;border-color:#534AB7}
+.sbtn{font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid #ccc;background:#fff;cursor:pointer}
+.sbtn:hover{background:#f0f0f0}
+.lcfg{display:flex;flex-direction:column;gap:5px}
+.lrow{display:flex;align-items:center;gap:6px;font-size:11px}
+.lrow label{color:#555;min-width:54px}
+.lrow input[type=range]{flex:1;accent-color:#1D6F4A}
+.lrow .bv{font-family:monospace;min-width:14px;color:#222;font-size:11px}
+table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px}
+th{font-size:10px;font-weight:600;color:#666;padding:2px 4px;text-align:center;border-bottom:1px solid #eee}
+td{padding:2px 3px;text-align:center}
+td:first-child{text-align:left;font-weight:600;color:#333;font-size:11px}
+td input{width:55px;font-size:10px;font-family:monospace;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:2px 3px;color:#222;text-align:center}
+td input.bias{background:#eee}
+td input:focus{outline:none;border-color:#534AB7}
+.wlayer-title{font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.05em;margin:6px 0 3px}
+.szrow{display:flex;align-items:center;gap:6px}
+.szrow input[type=range]{flex:1;accent-color:#534AB7}
 </style>
 
-<div class="intro-block">
-  <b>Neural Network Forward Pass</b> — This interactive visualization shows how a small neural network computes a prediction step by step.<br>
-  <b>Layers:</b> <span class="lbl-input">Input</span> x₁ and x₂ are your feature values. <span class="lbl-hidden">Hidden</span> neurons apply weights, add a bias, then pass through an activation function (e.g. ReLU). <span class="lbl-output">Output</span> applies a second activation to produce a final prediction.<br>
-  <b>Controls:</b> Drag <code>x1</code> / <code>x2</code> sliders to change inputs. Edit weights in the tables on the right. Hit <b>▶ Play</b> to step through the forward pass layer by layer, or click the dots to jump to any step. Use <code>‹ ›</code> to step manually. <code>↺</code> resets to the static view. <code>speed</code> controls animation pace. <code>font</code> adjusts text size on canvas. <code>H</code> changes canvas height. <b>Randomize</b> generates new weights.
+<div class="intro">
+  <b>Neural Network Forward Pass</b> — watch how input signals flow through a multi-layer network.<br>
+  <span class="pill pill-i">Input</span> x₁ and x₂ are your feature values.
+  <span class="pill pill-h">Hidden</span> neurons apply weights + bias then an activation function.
+  <span class="pill pill-o">Output</span> applies a final activation to produce a prediction between 0 and 1.<br>
+  <b>Controls:</b> Drag <code style="background:#eee;border-radius:3px;padding:1px 5px;font-size:12px">x1/x2</code> · <b>▶ Play</b> animates · <code style="background:#eee;border-radius:3px;padding:1px 5px;font-size:12px">‹ ›</code> manual steps · <code style="background:#eee;border-radius:3px;padding:1px 5px;font-size:12px">↺</code> resets · add layers/neurons in sidebar. During animation, computation details appear in the trace panel below the canvas.
 </div>
 
 <div class="root">
-<div class="canvas-wrap">
-  <div class="ctrl">
+<div class="main">
+  <div class="topbar">
     <label>x1</label>
     <input type="range" id="sx1" min="-2" max="2" step="0.1" value="0.5">
     <span class="bv" id="vx1">0.50</span>
     <label style="margin-left:3px">x2</label>
     <input type="range" id="sx2" min="-2" max="2" step="0.1" value="0.8">
     <span class="bv" id="vx2">0.80</span>
-    <button class="btn-go" id="btnPlay">▶ Play</button>
-    <button id="btnPrev">‹</button>
-    <button id="btnNext">›</button>
-    <button id="btnReset">↺</button>
+    <button class="tbtn go" id="btnPlay">▶ Play</button>
+    <button class="tbtn" id="btnPrev">‹</button>
+    <button class="tbtn" id="btnNext">›</button>
+    <button class="tbtn" id="btnReset">↺</button>
     <div class="dots" id="dots"></div>
-    <label style="margin-left:4px">speed</label>
+    <label style="margin-left:5px">speed</label>
     <input type="range" id="spd" min="0.2" max="4" step="0.1" value="1">
-    <span class="bv" id="vspd">1.0×</span>
+    <span class="bv" id="vspd">1×</span>
     <label style="margin-left:4px">font</label>
-    <input type="range" id="fsz" min="0.6" max="1.8" step="0.1" value="1.0" style="width:60px">
-    <span class="bv" id="vfsz">1.0×</span>
+    <input type="range" id="fsz" min="0.6" max="1.8" step="0.1" value="1" style="width:56px">
+    <span class="bv" id="vfsz">1×</span>
   </div>
   <canvas id="cv"></canvas>
-
-  <div class="trace-box">
-    <div class="trace-title">Computation trace</div>
-    <div class="trace-line" id="tr0"></div>
-    <div class="trace-line" id="tr1"></div>
-    <div class="trace-line" id="tr2"></div>
-    <div class="trace-line" id="tr3"></div>
+  <div class="explain" id="expl">Press <b>▶ Play</b> or <b>›</b> to walk through the forward pass.</div>
+  <div class="trace">
+    <div class="trtitle">
+      <span>Computation trace</span>
+      <span id="trLayerLbl" style="font-size:10px;color:#888;font-family:sans-serif;font-weight:400"></span>
+    </div>
+    <div id="trLines"></div>
   </div>
-
-  <div class="pred-box">
-    <div class="pred-label">Prediction</div>
-    <div class="pred-val" id="predVal">—</div>
-    <div class="pred-cls" id="predCls"></div>
-  </div>
+  <div class="pred"><div class="pred-lbl">Prediction</div><div class="pred-val" id="pval">—</div><div class="pred-cls" id="pcls"></div></div>
 </div>
 
 <div class="sidebar">
   <div class="card">
-    <div class="card-title">Canvas height</div>
-    <div class="sz-row">
-      <label style="font-size:11px;color:#555;font-family:monospace">H</label>
-      <input type="range" id="sldH" min="200" max="1000" step="10" value="360" style="flex:1;accent-color:#534AB7">
-      <span style="font-size:11px;font-family:monospace;color:#222;min-width:36px" id="vH">360px</span>
+    <div class="ctitle">Canvas height</div>
+    <div class="szrow">
+      <label style="font-size:11px;color:#666;font-family:monospace">H</label>
+      <input type="range" id="sldH" min="220" max="800" step="10" value="360">
+      <span style="font-size:11px;font-family:monospace;min-width:42px;color:#222" id="vH">360px</span>
+    </div>
+    <div style="font-size:10px;color:#aaa;margin-top:4px">Auto-expands when neurons don't fit</div>
+  </div>
+  <div class="card">
+    <div class="ctitle">Hidden layers
+      <div style="display:flex;gap:4px">
+        <button class="sbtn" id="btnAdd">+ layer</button>
+        <button class="sbtn" id="btnRem">− layer</button>
+      </div>
+    </div>
+    <div class="lcfg" id="lcfg"></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">Activation — hidden</div>
+    <div class="arow" id="aH">
+      <button class="abtn sel" data-fn="relu">ReLU</button>
+      <button class="abtn" data-fn="tanh">Tanh</button>
+      <button class="abtn" data-fn="sigmoid">Sigmoid</button>
+      <button class="abtn" data-fn="leaky">Leaky</button>
+      <button class="abtn" data-fn="linear">Linear</button>
+    </div>
+    <div class="ctitle" style="margin-top:9px">Activation — output</div>
+    <div class="arow" id="aO">
+      <button class="abtn" data-fn="relu">ReLU</button>
+      <button class="abtn" data-fn="tanh">Tanh</button>
+      <button class="abtn sel" data-fn="sigmoid">Sigmoid</button>
+      <button class="abtn" data-fn="leaky">Leaky</button>
+      <button class="abtn" data-fn="linear">Linear</button>
     </div>
   </div>
-
   <div class="card">
-    <div class="card-title">Activation — hidden</div>
-    <div class="act-row" id="actH">
-      <button class="act-btn sel" data-fn="relu">ReLU</button>
-      <button class="act-btn" data-fn="tanh">Tanh</button>
-      <button class="act-btn" data-fn="sigmoid">Sigmoid</button>
-      <button class="act-btn" data-fn="leaky">Leaky</button>
-      <button class="act-btn" data-fn="linear">Linear</button>
-    </div>
-    <div class="card-title" style="margin-top:9px">Activation — output</div>
-    <div class="act-row" id="actO">
-      <button class="act-btn" data-fn="relu">ReLU</button>
-      <button class="act-btn" data-fn="tanh">Tanh</button>
-      <button class="act-btn sel" data-fn="sigmoid">Sigmoid</button>
-      <button class="act-btn" data-fn="leaky">Leaky</button>
-      <button class="act-btn" data-fn="linear">Linear</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Hidden layer weights <button class="btn-sm" id="rndH">randomize</button></div>
-    <table>
-      <thead><tr><th></th><th>H1</th><th>H2</th></tr></thead>
-      <tbody>
-        <tr><td>b1</td><td><input class="bias-inp" id="bH1" type="number" step="0.01"></td><td><input class="bias-inp" id="bH2" type="number" step="0.01"></td></tr>
-        <tr><td>X1</td><td><input type="number" id="wX1H1" step="0.01"></td><td><input type="number" id="wX1H2" step="0.01"></td></tr>
-        <tr><td>X2</td><td><input type="number" id="wX2H1" step="0.01"></td><td><input type="number" id="wX2H2" step="0.01"></td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Output layer weights <button class="btn-sm" id="rndO">randomize</button></div>
-    <table>
-      <thead><tr><th></th><th>Y1</th></tr></thead>
-      <tbody>
-        <tr><td>b2</td><td><input class="bias-inp" id="bO1" type="number" step="0.01"></td></tr>
-        <tr><td>H1</td><td><input type="number" id="wH1O1" step="0.01"></td></tr>
-        <tr><td>H2</td><td><input type="number" id="wH2O1" step="0.01"></td></tr>
-      </tbody>
-    </table>
+    <div class="ctitle">Weights <button class="sbtn" id="btnRand">randomize</button></div>
+    <div id="wTables"></div>
   </div>
 </div>
 </div>
 
 <script>
 (function(){
-  const cv=document.getElementById('cv');
-  const ctx=cv.getContext('2d');
-  const DPR=window.devicePixelRatio||1;
-  let CH=360, fontScale=1.0;
+  const cv  = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const DPR = window.devicePixelRatio || 1;
 
-  function getW(){ return cv.parentElement.clientWidth||600; }
+  let userCH = 360, actualCH = 360;
+  let fScale = 1.0, speedMult = 1.0;
 
-  function resizeCanvas(){
-    const CW=getW();
-    cv.width=CW*DPR; cv.height=CH*DPR;
-    cv.style.height=CH+'px';
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.scale(DPR,DPR);
-    computeLayout(CW);
-    draw();
-  }
+  const PAD_TOP = 100, PAD_BOTTOM = 50, PAD_X_FRAC = 0.08;
+  const NR_MIN = 14, NR_MAX = 28, NODE_MIN_GAP = 10;
 
-  const COL={input:'#534AB7',hidden:'#1D6F4A',output:'#C04E2C'};
-  const SYNAPSE='#111', SYNAPSE_DIM='#ccc', BG='#fff', TEXT='#111';
-
-  const ACTS={
-    relu:   {fn:z=>Math.max(0,z),           label:'ReLU',   tex:'ReLU'},
-    tanh:   {fn:z=>Math.tanh(z),             label:'Tanh',   tex:'tanh'},
-    sigmoid:{fn:z=>1/(1+Math.exp(-z)),        label:'σ',      tex:'σ'},
-    leaky:  {fn:z=>z>=0?z:0.01*z,            label:'Leaky',  tex:'Leaky'},
-    linear: {fn:z=>z,                         label:'Linear', tex:'Linear'},
+  const ACTS = {
+    relu:    { fn: z=>Math.max(0,z),          lbl:'ReLU',   tex:'ReLU'   },
+    tanh:    { fn: z=>Math.tanh(z),            lbl:'Tanh',   tex:'tanh'   },
+    sigmoid: { fn: z=>1/(1+Math.exp(-z)),       lbl:'σ',      tex:'σ'      },
+    leaky:   { fn: z=>z>=0?z:0.01*z,           lbl:'Leaky',  tex:'Leaky'  },
+    linear:  { fn: z=>z,                        lbl:'Linear', tex:'Linear' },
   };
   let actH='relu', actO='sigmoid';
 
-  document.querySelectorAll('#actH .act-btn').forEach(b=>{
-    b.addEventListener('click',()=>{
-      document.querySelectorAll('#actH .act-btn').forEach(x=>x.classList.remove('sel'));
-      b.classList.add('sel'); actH=b.dataset.fn; draw();
-    });
-  });
-  document.querySelectorAll('#actO .act-btn').forEach(b=>{
-    b.addEventListener('click',()=>{
-      document.querySelectorAll('#actO .act-btn').forEach(x=>x.classList.remove('sel'));
-      b.classList.add('sel'); actO=b.dataset.fn; draw();
-    });
-  });
+  const COL  = { inp:'#534AB7', hid:'#1D6F4A', dead:'#bbb', out:'#C04E2C' };
+  const SYNS = '#111', SYND = '#d0d0d0', BG='#fff', TEXT='#111';
 
-  let NR,NX1,NX2,NH1,NH2,NO1;
-  function computeLayout(CW){
-    NR=Math.max(20,Math.min(36,Math.round(CW*0.048)));
-    const mx=Math.round(CW*0.12), hx=Math.round(CW*0.47), ox=Math.round(CW*0.83);
-    const cy=CH/2, vg=Math.round(CH*0.30);
-    NX1={x:mx,y:cy-vg*0.5}; NX2={x:mx,y:cy+vg*0.5};
-    NH1={x:hx,y:cy-vg*0.55}; NH2={x:hx,y:cy+vg*0.55};
-    NO1={x:ox,y:cy};
-  }
+  const f2  = v => (+v).toFixed(2);
+  const f4  = v => (+v).toFixed(4);
+  const fsc = n => Math.max(7, Math.round(n * fScale));
+  const rnd = () => parseFloat(((Math.random()*2-1)*0.5).toFixed(2));
 
-  const rnd=()=>parseFloat(((Math.random()*2-1)*0.5).toFixed(2));
-  let W={};
-  function initWeights(){
-    W={bH1:0.1,bH2:0.0,wX1H1:0.3,wX1H2:0.7,wX2H1:0.5,wX2H2:-0.2,bO1:-0.1,wH1O1:0.6,wH2O1:0.4};
-    syncInputs();
-  }
-  function syncInputs(){ Object.keys(W).forEach(k=>{ const e=document.getElementById(k); if(e) e.value=W[k].toFixed(2); }); }
-  function readInputs(){ Object.keys(W).forEach(k=>{ const e=document.getElementById(k); if(e) W[k]=parseFloat(e.value)||0; }); }
+  let hiddenSizes=[2,2], weights=[], biases=[], acts=[], zs=[];
+  let x1v=0.5, x2v=0.8, currentStep=-1, animTimer=null, animRunning=false;
 
-  document.querySelectorAll('.sidebar input[type=number]').forEach(e=>{ e.addEventListener('input',()=>{ readInputs(); draw(); }); });
-  document.getElementById('rndH').addEventListener('click',()=>{ W.bH1=rnd();W.bH2=rnd();W.wX1H1=rnd();W.wX1H2=rnd();W.wX2H1=rnd();W.wX2H2=rnd(); syncInputs(); draw(); });
-  document.getElementById('rndO').addEventListener('click',()=>{ W.bO1=rnd();W.wH1O1=rnd();W.wH2O1=rnd(); syncInputs(); draw(); });
-  initWeights();
-
-  // Height slider
-  document.getElementById('sldH').addEventListener('input',function(){
-    CH=+this.value;
-    document.getElementById('vH').textContent=CH+'px';
-    resizeCanvas();
-  });
-
-  const ro=new ResizeObserver(()=>resizeCanvas());
-  ro.observe(cv.parentElement);
-
-  let x1v=0.5,x2v=0.8,currentStep=-1,animTimer=null,animRunning=false,speedMult=1;
-  const TOTAL=5;
-  const EDGE_IDS=['x1h1','x2h1','x1h2','x2h2','h1o1','h2o1'];
-  let eLblA={},eLblT={};
-  EDGE_IDS.forEach(e=>{eLblA[e]=0;eLblT[e]=0;});
-
-  function setEdgeTargets(step){
-    const show=new Set();
-    if(step===1){show.add('x1h1');show.add('x2h1');}
-    if(step===2){show.add('x1h2');show.add('x2h2');}
-    if(step===3){show.add('h1o1');show.add('h2o1');}
-    EDGE_IDS.forEach(e=>{eLblT[e]=show.has(e)?1:0;});
-  }
-
+  // Popup alpha per destination neuron: key = "l_ni"
+  let popupA={}, popupT={};
   let rafId=null;
+
+  function struct()     { return [2,...hiddenSizes,1]; }
+  function totalSteps() { return struct().length-1; }
+
+  // ── Forward pass ──────────────────────────────────────────────
+  function forward(){
+    const s=struct(); acts=[[x1v,x2v]]; zs=[null];
+    for(let l=1;l<s.length;l++){
+      const fn=l===s.length-1?ACTS[actO].fn:ACTS[actH].fn, prev=acts[l-1], zL=[],aL=[];
+      for(let o=0;o<s[l];o++){
+        let z=biases[l-1][o];
+        for(let i=0;i<prev.length;i++) z+=weights[l-1][o][i]*prev[i];
+        zL.push(z); aL.push(fn(z));
+      }
+      zs.push(zL); acts.push(aL);
+    }
+  }
+
+  // ── Popup alpha state (per dest neuron) ───────────────────────
+  function buildPopupAlphas(){
+    const s=struct(); popupA={}; popupT={};
+    for(let l=1;l<s.length;l++)
+      for(let o=0;o<s[l];o++){ const k=`${l}_${o}`; popupA[k]=0; popupT[k]=0; }
+  }
+
+  function setPopupTargets(step){
+    Object.keys(popupT).forEach(k=>popupT[k]=0);
+    if(step>=1 && step<=totalSteps()){
+      const s=struct();
+      for(let o=0;o<s[step];o++) popupT[`${step}_${o}`]=1;
+    }
+  }
+
   function animAlphas(){
     let more=false;
-    EDGE_IDS.forEach(e=>{ const d=eLblT[e]-eLblA[e]; if(Math.abs(d)>0.01){eLblA[e]+=d*0.14;more=true;} else eLblA[e]=eLblT[e]; });
-    draw(); if(more) rafId=requestAnimationFrame(animAlphas);
+    Object.keys(popupA).forEach(k=>{
+      const d=popupT[k]-popupA[k];
+      if(Math.abs(d)>0.01){ popupA[k]+=d*0.14; more=true; }
+      else popupA[k]=popupT[k];
+    });
+    draw();
+    if(more) rafId=requestAnimationFrame(animAlphas);
   }
   function triggerAnim(){ if(rafId) cancelAnimationFrame(rafId); rafId=requestAnimationFrame(animAlphas); }
 
-  function nodeAlpha(id){
-    if(currentStep<0) return 1;
-    const m={0:['x1','x2'],1:['x1','x2','h1'],2:['x1','x2','h1','h2'],3:['h1','h2','o1'],4:['x1','x2','h1','h2','o1']};
-    return (m[currentStep]||[]).includes(id)?1:0.18;
+  // ── Weights ───────────────────────────────────────────────────
+  function initW(){
+    const s=struct(); weights=[]; biases=[];
+    for(let l=1;l<s.length;l++){
+      weights.push(Array.from({length:s[l]},()=>Array.from({length:s[l-1]},rnd)));
+      biases.push(Array.from({length:s[l]},rnd));
+    }
+    buildPopupAlphas(); buildWeightUI();
   }
-  function edgeActive(id){
-    if(currentStep<0) return true;
-    const m={0:[],1:['x1h1','x2h1'],2:['x1h1','x2h1','x1h2','x2h2'],3:['h1o1','h2o1'],4:['x1h1','x2h1','x1h2','x2h2','h1o1','h2o1']};
-    return (m[currentStep]||[]).includes(id);
+  function readW(){
+    const s=struct();
+    for(let l=1;l<s.length;l++){
+      for(let o=0;o<s[l];o++){
+        const be=document.getElementById(`b${l-1}_${o}`);
+        if(be) biases[l-1][o]=parseFloat(be.value)||0;
+        for(let i=0;i<s[l-1];i++){
+          const we=document.getElementById(`w${l-1}_${o}_${i}`);
+          if(we) weights[l-1][o][i]=parseFloat(we.value)||0;
+        }
+      }
+    }
+  }
+  function buildWeightUI(){
+    const s=struct(), c=document.getElementById('wTables'); c.innerHTML='';
+    for(let l=1;l<s.length;l++){
+      const out=s[l],inp=s[l-1],isOut=l===s.length-1;
+      const prevN=l===1?Array.from({length:inp},(_,i)=>`x${i+1}`):Array.from({length:inp},(_,i)=>`h${l-1}.${i+1}`);
+      const curN=isOut?['o₁']:Array.from({length:out},(_,i)=>`h${l}.${i+1}`);
+      const t=document.createElement('div'); t.className='wlayer-title';
+      t.textContent=isOut?'Output layer':`Hidden layer ${l}`; c.appendChild(t);
+      const tbl=document.createElement('table');
+      let h=`<thead><tr><th></th>${curN.map(n=>`<th>${n}</th>`).join('')}</tr></thead><tbody>`;
+      h+=`<tr><td style="color:#999;font-size:10px">bias</td>`;
+      for(let o=0;o<out;o++) h+=`<td><input class="bias" id="b${l-1}_${o}" type="number" step="0.01" value="${biases[l-1][o].toFixed(2)}"></td>`;
+      h+='</tr>';
+      for(let i=0;i<inp;i++){
+        h+=`<tr><td>${prevN[i]}</td>`;
+        for(let o=0;o<out;o++) h+=`<td><input id="w${l-1}_${o}_${i}" type="number" step="0.01" value="${weights[l-1][o][i].toFixed(2)}"></td>`;
+        h+='</tr>';
+      }
+      h+='</tbody>'; tbl.innerHTML=h; c.appendChild(tbl);
+    }
+    c.querySelectorAll('input').forEach(e=>e.addEventListener('input',()=>{ readW(); go(true); }));
   }
 
-  function compute(){
-    const hfn=ACTS[actH].fn,ofn=ACTS[actO].fn;
-    const z1=W.wX1H1*x1v+W.wX2H1*x2v+W.bH1; const h1=hfn(z1);
-    const z2=W.wX1H2*x1v+W.wX2H2*x2v+W.bH2; const h2=hfn(z2);
-    const z3=W.wH1O1*h1+W.wH2O1*h2+W.bO1;   const o1=ofn(z3);
-    return{z1,h1,z2,h2,z3,o1};
+  // ── Layer config ──────────────────────────────────────────────
+  function buildLayerCfg(){
+    const cfg=document.getElementById('lcfg'); cfg.innerHTML='';
+    hiddenSizes.forEach((sz,i)=>{
+      const row=document.createElement('div'); row.className='lrow';
+      row.innerHTML=`<label>Layer ${i+1}</label>
+        <input type="range" min="1" max="8" step="1" value="${sz}" data-i="${i}">
+        <span class="bv" id="ls${i}">${sz}</span>`;
+      cfg.appendChild(row);
+    });
+    cfg.querySelectorAll('input[type=range]').forEach(sl=>{
+      sl.addEventListener('input',function(){
+        hiddenSizes[+this.dataset.i]=+this.value;
+        document.getElementById('ls'+this.dataset.i).textContent=this.value;
+        stopAnim(); currentStep=-1; initW(); buildDots(); go();
+      });
+    });
+  }
+  document.getElementById('btnAdd').addEventListener('click',()=>{
+    if(hiddenSizes.length>=5)return;
+    hiddenSizes.push(2); stopAnim(); currentStep=-1;
+    buildLayerCfg(); initW(); buildDots(); go();
+  });
+  document.getElementById('btnRem').addEventListener('click',()=>{
+    if(hiddenSizes.length<=1)return;
+    hiddenSizes.pop(); stopAnim(); currentStep=-1;
+    buildLayerCfg(); initW(); buildDots(); go();
+  });
+
+  ['aH','aO'].forEach(id=>{
+    document.getElementById(id).querySelectorAll('.abtn').forEach(b=>{
+      b.addEventListener('click',()=>{
+        document.getElementById(id).querySelectorAll('.abtn').forEach(x=>x.classList.remove('sel'));
+        b.classList.add('sel');
+        if(id==='aH') actH=b.dataset.fn; else actO=b.dataset.fn;
+        go(true);
+      });
+    });
+  });
+
+  // ── Layout ────────────────────────────────────────────────────
+  let NR, lx, ly, CW_cur=0;
+
+  function computeLayout(CW){
+    CW_cur=CW;
+    const s=struct(), maxN=Math.max(...s);
+    NR=Math.max(NR_MIN,Math.min(NR_MAX,Math.round(CW*0.045)));
+    const neededH=PAD_TOP+PAD_BOTTOM+maxN*(2*NR)+Math.max(0,maxN-1)*NODE_MIN_GAP;
+    actualCH=Math.max(userCH,neededH);
+    const needW=Math.round(CW*DPR),needH=Math.round(actualCH*DPR);
+    if(cv.width!==needW||cv.height!==needH){
+      cv.width=needW; cv.height=needH;
+      ctx.setTransform(1,0,0,1,0,0); ctx.scale(DPR,DPR);
+    }
+    cv.style.height=actualCH+'px';
+    const padX=Math.round(CW*PAD_X_FRAC), usableW=CW-padX*2;
+    lx=s.map((_,i)=>Math.round(padX+(usableW/Math.max(s.length-1,1))*i));
+    const availH=actualCH-PAD_TOP-PAD_BOTTOM;
+    ly=s.map(n=>{
+      if(n===1) return [PAD_TOP+availH/2];
+      const gap=availH/(n-1);
+      return Array.from({length:n},(_,i)=>Math.round(PAD_TOP+i*gap));
+    });
   }
 
-  const f2=v=>v.toFixed(2);
-  const f4=v=>v.toFixed(4);
-  const fsc=s=>Math.round(s*fontScale);
+  function resizeCanvas(){ const CW=cv.parentElement.clientWidth; if(!CW)return; computeLayout(CW); draw(); }
+  new ResizeObserver(()=>resizeCanvas()).observe(cv.parentElement);
 
+  // ── Visibility ────────────────────────────────────────────────
+  function nodeAlpha(li){ return currentStep<0||li<=currentStep?1:0.18; }
+  function edgeActive(fromL){ return currentStep<0||currentStep>=fromL+1; }
+
+  // ── Draw helpers ──────────────────────────────────────────────
   function drawArrow(x1,y1,x2,y2,active){
-    const col=active?SYNAPSE:SYNAPSE_DIM;
-    const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
-    const ux=dx/len,uy=dy/len;
-    const sx=x1+ux*NR,sy=y1+uy*NR,ex=x2-ux*(NR+4),ey=y2-uy*(NR+4);
-    ctx.save();
-    ctx.strokeStyle=col; ctx.lineWidth=active?1.8:1.1;
+    const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy); if(len<1)return;
+    const ux=dx/len,uy=dy/len,sx=x1+ux*NR,sy=y1+uy*NR,ex=x2-ux*(NR+4),ey=y2-uy*(NR+4);
+    ctx.save(); ctx.strokeStyle=active?SYNS:SYND; ctx.lineWidth=active?1.8:1.0;
     ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey); ctx.stroke();
-    ctx.fillStyle=col;
-    ctx.beginPath();
-    ctx.moveTo(ex+ux*9,ey+uy*9);
-    ctx.lineTo(ex-uy*4,ey+ux*4);
-    ctx.lineTo(ex+uy*4,ey-ux*4);
-    ctx.closePath(); ctx.fill();
+    ctx.fillStyle=active?SYNS:SYND;
+    ctx.beginPath(); ctx.moveTo(ex+ux*9,ey+uy*9); ctx.lineTo(ex-uy*4,ey+ux*4); ctx.lineTo(ex+uy*4,ey-ux*4); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
 
   function drawWeightLabel(x1,y1,x2,y2,label,active){
     const t=0.38,px=x1+(x2-x1)*t,py=y1+(y2-y1)*t,angle=Math.atan2(y2-y1,x2-x1);
-    ctx.save(); ctx.globalAlpha=active?0.85:0.28;
+    ctx.save(); ctx.globalAlpha=active?0.7:0.2;
     ctx.translate(px,py); ctx.rotate(angle);
-    ctx.font=`${fsc(Math.max(9,Math.round(NR*0.38)))}px monospace`;
+    ctx.font=`${fsc(Math.max(7,Math.round(NR*0.36)))}px monospace`;
     ctx.fillStyle=TEXT; ctx.textAlign='center'; ctx.textBaseline='bottom';
     ctx.fillText(label,0,-5); ctx.restore();
   }
 
-  function drawEdgeFormula(x1,y1,x2,y2,label,alpha){
-    if(alpha<0.02) return;
-    const mx=(x1+x2)/2,my=(y1+y2)/2,angle=Math.atan2(y2-y1,x2-x1);
+  function drawNode(x,y,lbl,val,col,alpha,badge){
     ctx.save(); ctx.globalAlpha=alpha;
-    ctx.translate(mx,my); ctx.rotate(angle);
-    ctx.font=`${fsc(Math.max(9,Math.round(NR*0.38)))}px monospace`;
-    ctx.fillStyle=TEXT; ctx.textAlign='center'; ctx.textBaseline='bottom';
-    ctx.fillText(label,0,-6); ctx.restore();
-  }
-
-  function drawNode(pos,innerLbl,valBelow,col,alpha,actLbl){
-    ctx.save(); ctx.globalAlpha=alpha;
-    ctx.beginPath(); ctx.arc(pos.x,pos.y,NR,0,Math.PI*2);
-    ctx.fillStyle=BG; ctx.fill();
-    ctx.strokeStyle=col; ctx.lineWidth=2.4; ctx.stroke();
-
-    ctx.font=`500 ${fsc(Math.max(12,Math.round(NR*0.54)))}px sans-serif`;
+    ctx.beginPath(); ctx.arc(x,y,NR,0,Math.PI*2);
+    ctx.fillStyle=BG; ctx.fill(); ctx.strokeStyle=col; ctx.lineWidth=2.3; ctx.stroke();
+    ctx.font=`500 ${fsc(Math.max(9,Math.round(NR*0.52)))}px sans-serif`;
     ctx.fillStyle=col; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(innerLbl,pos.x,pos.y);
-
-    if(valBelow!==null){
-      ctx.font=`${fsc(Math.max(11,Math.round(NR*0.46)))}px monospace`;
-      ctx.fillStyle=TEXT; ctx.textBaseline='top';
-      ctx.fillText(valBelow,pos.x,pos.y+NR+9);
+    ctx.fillText(lbl,x,y);
+    if(val!==null){
+      ctx.font=`${fsc(Math.max(9,Math.round(NR*0.44)))}px monospace`;
+      ctx.fillStyle=TEXT; ctx.textBaseline='top'; ctx.fillText(val,x,y+NR+7);
     }
-
-    if(actLbl){
-      const fsB=fsc(Math.max(8,Math.round(NR*0.33)));
+    if(badge){
+      const fsB=fsc(Math.max(7,Math.round(NR*0.31)));
       ctx.font=`bold ${fsB}px sans-serif`;
-      const tw=ctx.measureText(actLbl).width;
-      const bw=tw+10,bh=fsB+6,bx=pos.x+NR*0.5,by=pos.y-NR-bh+1;
-      ctx.fillStyle=col;
-      ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,3); ctx.fill();
+      const tw=ctx.measureText(badge).width, bw=tw+9,bh=fsB+6,bx=x+NR*0.42,by=y-NR-bh;
+      ctx.fillStyle=col; ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,3); ctx.fill();
       ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.textBaseline='middle';
-      ctx.fillText(actLbl,bx+5,by+bh/2);
+      ctx.fillText(badge,bx+4,by+bh/2);
     }
     ctx.restore();
   }
 
-  // Bias for hidden nodes: centered above node, above the activation badge, with extra clearance
-  function drawBiasHidden(pos,bval,col,alpha){
-    if(alpha<0.1) return;
+  function drawBias(x,y,b,col,alpha,hasBadge){
+    if(alpha<0.1)return;
     ctx.save(); ctx.globalAlpha=alpha*0.85;
-    const fsB=fsc(Math.max(8,Math.round(NR*0.33)));
-    const badgeH=fsB+6;           // height of activation badge
-    const gap=6;                   // extra space above badge
-    const textSize=fsc(Math.max(9,Math.round(NR*0.37)));
-    const y=pos.y-NR-badgeH-gap-textSize*0.3;
-    ctx.font=`${textSize}px monospace`;
+    const fsB=fsc(Math.max(7,Math.round(NR*0.31))), badgeH=hasBadge?(fsB+6+4):0;
+    ctx.font=`${fsc(Math.max(8,Math.round(NR*0.37)))}px monospace`;
     ctx.fillStyle=col; ctx.textAlign='center'; ctx.textBaseline='bottom';
-    ctx.fillText(`b=${f2(bval)}`,pos.x,y);
+    ctx.fillText(`b=${f2(b)}`,x,y-NR-badgeH-6);
     ctx.restore();
   }
 
-  // Bias for output node: pushed well above the node top + badge
-  function drawBiasOutput(pos,bval,col,alpha){
-    if(alpha<0.1) return;
-    ctx.save(); ctx.globalAlpha=alpha*0.85;
-    const fsB=fsc(Math.max(8,Math.round(NR*0.33)));
-    const badgeH=fsB+6;
-    const textSize=fsc(Math.max(9,Math.round(NR*0.37)));
-    // extra 18px clearance so it clears the badge top completely
-    const y=pos.y-NR-badgeH-18-textSize*0.3;
-    ctx.font=`${textSize}px monospace`;
-    ctx.fillStyle=col; ctx.textAlign='center'; ctx.textBaseline='bottom';
-    ctx.fillText(`b=${f2(bval)}`,pos.x,y);
-    ctx.restore();
-  }
+  // Floating popup bubble next to a destination neuron showing its weighted sum
+  function drawNeuronPopup(x,y,col,alpha,lines){
+    if(alpha<0.02)return;
+    const fsL=fsc(Math.max(8,Math.round(NR*0.38)));
+    ctx.font=`${fsL}px monospace`;
 
-  function drawLayerLabel(x,topY,label){
-    ctx.font=`${fsc(Math.max(11,Math.round(NR*0.46)))}px sans-serif`;
-    ctx.fillStyle='#aaa'; ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.fillText(label,x,topY);
-  }
+    // measure widest line
+    let maxW=0;
+    lines.forEach(l=>{ const w=ctx.measureText(l).width; if(w>maxW) maxW=w; });
 
-  function updateTrace(v){
-    const hn=ACTS[actH].tex, on=ACTS[actO].tex;
-    const lines=[
-      `z₁ = ${f2(W.wX1H1)}×${f2(x1v)} + ${f2(W.wX2H1)}×${f2(x2v)} + ${f2(W.bH1)} = ${f2(v.z1)}  →  h₁ = ${hn}(${f2(v.z1)}) = ${f2(v.h1)}`,
-      `z₂ = ${f2(W.wX1H2)}×${f2(x1v)} + ${f2(W.wX2H2)}×${f2(x2v)} + ${f2(W.bH2)} = ${f2(v.z2)}  →  h₂ = ${hn}(${f2(v.z2)}) = ${f2(v.h2)}`,
-      `z₃ = ${f2(W.wH1O1)}×${f2(v.h1)} + ${f2(W.wH2O1)}×${f2(v.h2)} + ${f2(W.bO1)} = ${f2(v.z3)}`,
-      `o₁ = ${on}(${f2(v.z3)}) = 1/(1+e^${f2(-v.z3)}) = ${f4(v.o1)}`,
-    ];
-    const activeMap={1:0,2:1,3:2,4:3};
-    lines.forEach((txt,i)=>{
-      const el=document.getElementById('tr'+i);
-      el.textContent=txt;
-      el.classList.toggle('active',currentStep>=0&&activeMap[currentStep]===i);
+    const lineH=fsL+5, pad=7;
+    const bw=maxW+pad*2, bh=lines.length*lineH+pad*2;
+
+    // position to the right of the node; flip left if near right edge
+    let bx=x+NR+10, by=y-bh/2;
+    if(CW_cur && bx+bw>CW_cur-8) bx=x-NR-10-bw;
+    by=Math.max(4, Math.min(actualCH-bh-4, by));
+
+    ctx.save(); ctx.globalAlpha=alpha;
+
+    // background
+    ctx.fillStyle='#fffef5';
+    ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,6); ctx.fill();
+    ctx.strokeStyle=col; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,6); ctx.stroke();
+
+    // connector dot
+    ctx.fillStyle=col;
+    ctx.beginPath(); ctx.arc(x+NR+3,y,3,0,Math.PI*2); ctx.fill();
+
+    // lines
+    ctx.fillStyle='#222';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    lines.forEach((l,i)=>{
+      // highlight the result line
+      if(i===lines.length-1){ ctx.font=`bold ${fsL}px monospace`; ctx.fillStyle=col; }
+      else { ctx.font=`${fsL}px monospace`; ctx.fillStyle='#444'; }
+      ctx.fillText(l, bx+pad, by+pad+i*lineH);
     });
-    const pct=(v.o1*100).toFixed(1);
-    const predEl=document.getElementById('predVal');
-    const clsEl=document.getElementById('predCls');
-    predEl.textContent=pct+'%';
-    predEl.style.color=v.o1>=0.5?'#1D6F4A':'#C04E2C';
-    clsEl.textContent=v.o1>=0.5?'→ class 1  (≥ 0.5)':'→ class 0  (< 0.5)';
-    clsEl.style.color=v.o1>=0.5?'#1D6F4A':'#C04E2C';
+    ctx.restore();
   }
 
+  // ── Main draw ─────────────────────────────────────────────────
   function draw(){
-    const CW=getW(), v=compute();
-    ctx.clearRect(0,0,CW,CH);
-    ctx.fillStyle=BG; ctx.fillRect(0,0,CW,CH);
+    if(!CW_cur||!NR)return;
+    const s=struct();
+    ctx.clearRect(0,0,CW_cur,actualCH);
+    ctx.fillStyle=BG; ctx.fillRect(0,0,CW_cur,actualCH);
 
-    drawLayerLabel(NX1.x,10,'Input');
-    drawLayerLabel(NH1.x,10,`Hidden (${ACTS[actH].label})`);
-    drawLayerLabel(NO1.x,10,`Output (${ACTS[actO].label})`);
-
-    const edges=[
-      {id:'x1h1',a:NX1,b:NH1,w:`w=${f2(W.wX1H1)}`,fl:`${f2(x1v)}×${f2(W.wX1H1)}+${f2(W.bH1)}=${f2(W.wX1H1*x1v+W.bH1)}`},
-      {id:'x2h1',a:NX2,b:NH1,w:`w=${f2(W.wX2H1)}`,fl:`${f2(x2v)}×${f2(W.wX2H1)}+${f2(W.bH1)}=${f2(W.wX2H1*x2v+W.bH1)}`},
-      {id:'x1h2',a:NX1,b:NH2,w:`w=${f2(W.wX1H2)}`,fl:`${f2(x1v)}×${f2(W.wX1H2)}+${f2(W.bH2)}=${f2(W.wX1H2*x1v+W.bH2)}`},
-      {id:'x2h2',a:NX2,b:NH2,w:`w=${f2(W.wX2H2)}`,fl:`${f2(x2v)}×${f2(W.wX2H2)}+${f2(W.bH2)}=${f2(W.wX2H2*x2v+W.bH2)}`},
-      {id:'h1o1',a:NH1,b:NO1,w:`w=${f2(W.wH1O1)}`,fl:`${f2(v.h1)}×${f2(W.wH1O1)}=${f2(v.h1*W.wH1O1)}`},
-      {id:'h2o1',a:NH2,b:NO1,w:`w=${f2(W.wH2O1)}`,fl:`${f2(v.h2)}×${f2(W.wH2O1)}=${f2(v.h2*W.wH2O1)}`},
-    ];
-    edges.forEach(e=>{
-      const active=edgeActive(e.id);
-      drawArrow(e.a.x,e.a.y,e.b.x,e.b.y,active);
-      if(eLblA[e.id]<0.05) drawWeightLabel(e.a.x,e.a.y,e.b.x,e.b.y,e.w,active);
-      drawEdgeFormula(e.a.x,e.a.y,e.b.x,e.b.y,e.fl,eLblA[e.id]);
+    // Layer labels
+    const lbls=['Input',...hiddenSizes.map((_,i)=>`Hidden ${i+1}`),'Output'];
+    s.forEach((_,li)=>{
+      ctx.font=`${fsc(Math.max(10,Math.round(NR*0.44)))}px sans-serif`;
+      ctx.fillStyle='#aaa'; ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillText(lbls[li],lx[li],8);
     });
 
-    drawBiasHidden(NH1,W.bH1,COL.hidden,nodeAlpha('h1'));
-    drawBiasHidden(NH2,W.bH2,COL.hidden,nodeAlpha('h2'));
-    drawBiasOutput(NO1,W.bO1,COL.output,nodeAlpha('o1'));
-
-    const showH1=currentStep<0||currentStep>=1;
-    const showH2=currentStep<0||currentStep>=2;
-    const showO =currentStep<0||currentStep>=4;
-
-    drawNode(NX1,'x₁',f2(x1v),COL.input,nodeAlpha('x1'),null);
-    drawNode(NX2,'x₂',f2(x2v),COL.input,nodeAlpha('x2'),null);
-    drawNode(NH1,'h₁',showH1?f2(v.h1):null,COL.hidden,nodeAlpha('h1'),ACTS[actH].label);
-    drawNode(NH2,'h₂',showH2?f2(v.h2):null,COL.hidden,nodeAlpha('h2'),ACTS[actH].label);
-    drawNode(NO1,'o₁',showO?f4(v.o1):null,COL.output,nodeAlpha('o1'),ACTS[actO].label);
-
-    if(currentStep===3&&nodeAlpha('o1')>0.5){
-      ctx.save();
-      ctx.font=`${fsc(Math.max(9,Math.round(NR*0.38)))}px monospace`;
-      ctx.fillStyle='#555'; ctx.textAlign='left'; ctx.textBaseline='middle';
-      ctx.fillText(`z=${f2(v.z3)}`,NO1.x+NR+8,NO1.y-10);
-      ctx.fillText(`${ACTS[actO].label}(z)=${f4(v.o1)}`,NO1.x+NR+8,NO1.y+10);
-      ctx.restore();
+    // Edges — weight labels only, no formulas on edges
+    for(let l=0;l<s.length-1;l++){
+      const active=edgeActive(l);
+      for(let i=0;i<s[l];i++){
+        for(let j=0;j<s[l+1];j++){
+          drawArrow(lx[l],ly[l][i],lx[l+1],ly[l+1][j],active);
+          drawWeightLabel(lx[l],ly[l][i],lx[l+1],ly[l+1][j],`w=${f2(weights[l][j][i])}`,active);
+        }
+      }
     }
 
-    updateTrace(v);
-    updateDots();
+    // Nodes
+    s.forEach((n,li)=>{
+      const isInp=li===0,isOut=li===s.length-1,alp=nodeAlpha(li);
+      for(let ni=0;ni<n;ni++){
+        const x=lx[li],y=ly[li][ni];
+        if(isInp){
+          drawNode(x,y,`x${ni+1}`,f2(acts[0][ni]),COL.inp,alp,null);
+        } else if(isOut){
+          const showVal=currentStep<0||currentStep>=totalSteps();
+          drawBias(x,y,biases[li-1][0],COL.out,alp,true);
+          drawNode(x,y,'o₁',showVal?f4(acts[acts.length-1][0]):null,COL.out,alp,ACTS[actO].lbl);
+        } else {
+          const isDead=currentStep>=li&&acts[li]&&acts[li][ni]===0;
+          const col=isDead?COL.dead:COL.hid;
+          const showVal=currentStep<0||currentStep>=li;
+          drawBias(x,y,biases[li-1][ni],COL.hid,alp,true);
+          drawNode(x,y,`h${li}.${ni+1}`,showVal&&acts[li]?f2(acts[li][ni]):null,col,alp,ACTS[actH].lbl);
+        }
+      }
+    });
+
+    // Neuron popup bubbles (animated fade, only for active step's dest layer)
+    if(currentStep>=1){
+      const destL=currentStep;
+      const s=struct();
+      const isOut=destL===s.length-1;
+      const fn=isOut?ACTS[actO].tex:ACTS[actH].tex;
+      const col=isOut?COL.out:COL.hid;
+
+      for(let o=0;o<s[destL];o++){
+        const alpha=popupA[`${destL}_${o}`]||0;
+        if(alpha<0.02)continue;
+        const x=lx[destL],y=ly[destL][o];
+        const prev=acts[destL-1];
+
+        // Build popup lines: one line per incoming weight, then z=, then activation
+        const lines=[];
+        for(let i=0;i<prev.length;i++){
+          const w=weights[destL-1][o][i], contrib=w*prev[i];
+          lines.push(`${f2(prev[i])} × ${f2(w)} = ${f2(contrib)}`);
+        }
+        // bias line
+        lines.push(`bias = ${f2(biases[destL-1][o])}`);
+        // z sum
+        const z=zs[destL][o];
+        const weightedSum = prev.reduce((sum, a, i) => sum + weights[destL-1][o][i]*a, 0);
+        lines.push(`z = ${f2(biases[destL-1][o])} + ${f2(weightedSum)} = ${f2(z)}`);
+        // activation result
+        const a=acts[destL][o];
+        const isDead=a===0;
+        lines.push(`${fn}(${f2(z)}) = ${f2(a)}${isDead?' ✕':''}`);
+
+        drawNeuronPopup(x,y,isDead?COL.dead:col,alpha,lines);
+      }
+    }
+
+    updateTrace(); updatePred(); updateDots();
   }
 
-  function updateDots(){ document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('on',i===currentStep)); }
+  // ── Trace ─────────────────────────────────────────────────────
+  function updateTrace(){
+    const s=struct(), c=document.getElementById('trLines'); c.innerHTML='';
+    const lbl=document.getElementById('trLayerLbl');
 
-  const dotsEl=document.getElementById('dots');
-  ['Inputs','→H1','→H2','→Out','Full'].forEach((tip,i)=>{
-    const d=document.createElement('span');
-    d.className='dot'; d.title=tip;
-    d.addEventListener('click',()=>{ stopAnim(); currentStep=i; setEdgeTargets(i); triggerAnim(); });
-    dotsEl.appendChild(d);
-  });
+    if(currentStep>=1){
+      const destL=currentStep, isOut=destL===s.length-1;
+      lbl.textContent=isOut?'Output layer':`Hidden layer ${destL}`;
+      const fn=isOut?ACTS[actO].tex:ACTS[actH].tex;
+      for(let o=0;o<s[destL];o++){
+        const prev=acts[destL-1];
+        const grp=document.createElement('div'); grp.className='trgroup';
+        const glbl=document.createElement('div'); glbl.className='trgroup-lbl';
+        glbl.textContent=isOut?'o₁':`h${destL}.${o+1}`;
+        grp.appendChild(glbl);
+
+        let expr='';
+        for(let i=0;i<prev.length;i++){
+          expr+=`${f2(weights[destL-1][o][i])}×${f2(prev[i])}`;
+          if(i<prev.length-1) expr+=' + ';
+        }
+        expr+=` + ${f2(biases[destL-1][o])}`;
+
+        const z=zs[destL][o], a=acts[destL][o];
+        [`z = ${expr} = ${f2(z)}`,`${fn}(${f2(z)}) = ${isOut?f4(a):f2(a)}`].forEach((txt,ti)=>{
+          const div=document.createElement('div');
+          div.className='trline on';
+          div.style.marginBottom='1px';
+          div.textContent=txt;
+          grp.appendChild(div);
+        });
+        c.appendChild(grp);
+      }
+    } else {
+      lbl.textContent='';
+      // Show full trace summary when not animating
+      for(let l=1;l<s.length;l++){
+        const isOut=l===s.length-1,outN=s[l],prev=acts[l-1],fn=isOut?ACTS[actO].tex:ACTS[actH].tex;
+        for(let o=0;o<outN;o++){
+          let expr='';
+          for(let i=0;i<prev.length;i++){ expr+=`${f2(weights[l-1][o][i])}×${f2(prev[i])}`; if(i<prev.length-1) expr+=' + '; }
+          expr+=` + ${f2(biases[l-1][o])} = ${f2(zs[l][o])}`;
+          const zN=isOut?'z_out':`z${l}.${o+1}`,aN=isOut?'o₁':`h${l}.${o+1}`,aV=isOut?f4(acts[l][o]):f2(acts[l][o]);
+          const div=document.createElement('div'); div.className='trline';
+          div.textContent=`${zN} = ${expr}  →  ${aN} = ${fn}(${f2(zs[l][o])}) = ${aV}`;
+          c.appendChild(div);
+        }
+      }
+    }
+  }
+
+  function updatePred(){
+    const out=acts[acts.length-1][0],pct=(out*100).toFixed(1);
+    document.getElementById('pval').textContent=pct+'%';
+    document.getElementById('pval').style.color=out>=0.5?'#1D6F4A':'#C04E2C';
+    document.getElementById('pcls').textContent=out>=0.5?'→ class 1 (≥ 0.5)':'→ class 0 (< 0.5)';
+    document.getElementById('pcls').style.color=out>=0.5?'#1D6F4A':'#C04E2C';
+  }
+
+  function updateExplain(step){
+    const total=totalSteps(),box=document.getElementById('expl');
+    box.className='explain';
+    if(step<0){ box.innerHTML='Press <b>▶ Play</b> or <b>›</b> to walk through the forward pass.'; return; }
+    if(step===0){
+      box.className='explain h';
+      box.innerHTML=`<b>Step 1 — Inputs.</b> x₁ = <b>${f2(x1v)}</b>, x₂ = <b>${f2(x2v)}</b>. These values enter the network and will be multiplied by the first layer's weights.`;
+      return;
+    }
+    if(step===total){
+      box.className='explain o';
+      const out=acts[acts.length-1][0],pct=(out*100).toFixed(1),z=zs[zs.length-1][0];
+      const conf=out>0.8?'Confident — well above 50%.':out<0.2?'Confident — well below 50%.':out>=0.4&&out<0.6?'Right in the middle — the network is uncertain.':`${out>=0.5?'Just above':'Just below'} 50%.`;
+      box.innerHTML=`<b>Step ${step+1} — Output.</b> z = ${f2(z)}, then ${ACTS[actO].lbl} gives <b>${pct}%</b>. ${conf}`;
+      return;
+    }
+    box.className='explain h';
+    const lA=acts[step],nn=lA.length,dead=lA.filter(v=>v===0).length;
+    const maxV=Math.max(...lA),maxI=lA.indexOf(maxV);
+    let html=`<b>Step ${step+1} — Hidden layer ${step}.</b> ${nn} neuron${nn>1?'s':''} each computed a weighted sum, added a bias, then ran <b>${ACTS[actH].lbl}</b>. `;
+    if(dead===nn) html+=`Every pre-activation was negative — ${ACTS[actH].lbl} zeroed all of them.`;
+    else if(dead>0){ const dN=lA.map((v,i)=>v===0?`h${step}.${i+1}`:null).filter(Boolean).join(', '); html+=`Neuron${dead>1?'s':''} <b>${dN}</b> got negative pre-activations and ${ACTS[actH].lbl} set ${dead>1?'them':'it'} to 0. Strongest: <b>h${step}.${maxI+1} = ${f2(maxV)}</b>.`; }
+    else html+=`All ${nn} fired. Strongest: <b>h${step}.${maxI+1} = ${f2(maxV)}</b>.`;
+    html+=` See the computation panel below for the full breakdown.`;
+    box.innerHTML=html;
+  }
+
+  function buildDots(){
+    const wrap=document.getElementById('dots'); wrap.innerHTML='';
+    for(let i=0;i<=totalSteps();i++){
+      const d=document.createElement('span'); d.className='dot';
+      d.addEventListener('click',()=>{ stopAnim(); currentStep=i; setPopupTargets(i); triggerAnim(); updateExplain(i); });
+      wrap.appendChild(d);
+    }
+  }
+  function updateDots(){
+    document.querySelectorAll('.dot').forEach((d,i)=>{
+      d.classList.remove('on','done');
+      if(i===currentStep) d.classList.add('on');
+      else if(i<currentStep) d.classList.add('done');
+    });
+  }
+
+  function go(keepStep){
+    if(!keepStep) currentStep=-1;
+    forward();
+    const CW=cv.parentElement.clientWidth; if(CW) computeLayout(CW);
+    draw(); updateExplain(currentStep);
+  }
 
   function stopAnim(){
     if(animTimer){clearTimeout(animTimer);animTimer=null;}
     animRunning=false;
-    const b=document.getElementById('btnPlay');
-    b.textContent='▶ Play'; b.className='btn-go';
+    const b=document.getElementById('btnPlay'); b.textContent='▶ Play'; b.className='tbtn go';
   }
   function startAnim(){
     stopAnim(); animRunning=true;
-    const b=document.getElementById('btnPlay');
-    b.textContent='■ Stop'; b.className='';
-    currentStep=0; setEdgeTargets(0); triggerAnim();
-    const step=()=>{
-      if(!animRunning) return;
-      if(currentStep<TOTAL-1){ currentStep++; setEdgeTargets(currentStep); triggerAnim(); animTimer=setTimeout(step,900/speedMult); }
-      else stopAnim();
+    document.getElementById('btnPlay').textContent='■ Stop';
+    document.getElementById('btnPlay').className='tbtn';
+    if(currentStep>=totalSteps()) currentStep=-1;
+    const tick=()=>{
+      if(!animRunning)return;
+      if(currentStep<totalSteps()){
+        currentStep++; forward(); computeLayout(CW_cur);
+        setPopupTargets(currentStep); triggerAnim(); updateExplain(currentStep);
+        animTimer=setTimeout(tick,900/speedMult);
+      } else stopAnim();
     };
-    animTimer=setTimeout(step,900/speedMult);
+    animTimer=setTimeout(tick,80);
   }
 
   document.getElementById('btnPlay').addEventListener('click',()=>animRunning?stopAnim():startAnim());
-  document.getElementById('btnPrev').addEventListener('click',()=>{ stopAnim(); currentStep=Math.max(-1,currentStep-1); setEdgeTargets(currentStep); triggerAnim(); });
-  document.getElementById('btnNext').addEventListener('click',()=>{ stopAnim(); currentStep=Math.min(TOTAL-1,currentStep+1); setEdgeTargets(currentStep); triggerAnim(); });
-  document.getElementById('btnReset').addEventListener('click',()=>{ stopAnim(); currentStep=-1; EDGE_IDS.forEach(e=>{eLblA[e]=0;eLblT[e]=0;}); draw(); });
-
-  document.getElementById('sx1').addEventListener('input',function(){ x1v=+this.value; document.getElementById('vx1').textContent=f2(x1v); draw(); });
-  document.getElementById('sx2').addEventListener('input',function(){ x2v=+this.value; document.getElementById('vx2').textContent=f2(x2v); draw(); });
+  document.getElementById('btnPrev').addEventListener('click',()=>{ stopAnim(); currentStep=Math.max(-1,currentStep-1); setPopupTargets(currentStep); triggerAnim(); updateExplain(currentStep); });
+  document.getElementById('btnNext').addEventListener('click',()=>{ stopAnim(); currentStep=Math.min(totalSteps(),currentStep+1); forward(); computeLayout(CW_cur); setPopupTargets(currentStep); triggerAnim(); updateExplain(currentStep); });
+  document.getElementById('btnReset').addEventListener('click',()=>{ stopAnim(); currentStep=-1; Object.keys(popupA).forEach(k=>{popupA[k]=0;popupT[k]=0;}); go(); });
+  document.getElementById('btnRand').addEventListener('click',()=>{ stopAnim(); currentStep=-1; initW(); go(); });
+  document.getElementById('sx1').addEventListener('input',function(){ x1v=+this.value; document.getElementById('vx1').textContent=f2(x1v); stopAnim(); go(); });
+  document.getElementById('sx2').addEventListener('input',function(){ x2v=+this.value; document.getElementById('vx2').textContent=f2(x2v); stopAnim(); go(); });
   document.getElementById('spd').addEventListener('input',function(){ speedMult=+this.value; document.getElementById('vspd').textContent=speedMult.toFixed(1)+'×'; });
-  document.getElementById('fsz').addEventListener('input',function(){ fontScale=+this.value; document.getElementById('vfsz').textContent=fontScale.toFixed(1)+'×'; draw(); });
-
-  resizeCanvas();
+  document.getElementById('fsz').addEventListener('input',function(){ fScale=+this.value; document.getElementById('vfsz').textContent=fScale.toFixed(1)+'×'; draw(); });
+  document.getElementById('sldH').addEventListener('input',function(){ userCH=+this.value; document.getElementById('vH').textContent=userCH+'px'; const CW=cv.parentElement.clientWidth; if(CW){computeLayout(CW);draw();} });
+  buildLayerCfg(); initW(); buildDots(); forward();
+  setTimeout(()=>resizeCanvas(),0);
 })();
 </script>
