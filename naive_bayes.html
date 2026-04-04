@@ -263,10 +263,10 @@
 </head>
 <body>
 
-<h1 class="page-title">Naive Bayes — Spam Detector</h1>
+<h1 class="page-title">Naive Bayes based Spam Detector</h1>
 <div class="explainer">
   <strong>How does it work?</strong><br>
-  The AI has seen thousands of emails before. It learned that certain words (like <em>"FREE"</em> or <em>"winner"</em>) appear much more often in spam, while others (like <em>"meeting"</em> or <em>"report"</em>) are normal. When it sees a new email, it looks at each word and asks: <em>"Does this word make it more or less suspicious?"</em> — then combines all the clues to make a final decision.
+  The AI has seen many emails before. It learned that certain words (like <em>"FREE"</em> or <em>"winner"</em>) appear much more often in spam, while others (like <em>"meeting"</em> or <em>"report"</em>) are normal, and saves it in form of probability distributions. When new email is being added, it looks at each word and asks: <em>"Does this word make it more or less suspicious?"</em>. It then combines all probabilities of spam and normal words to make a final decision.
 </div>
 
 <div class="layout">
