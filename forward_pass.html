@@ -1,4 +1,3 @@
-
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 .intro{padding:11px 14px;background:#f8f7ff;border-left:3px solid #534AB7;border-radius:0 8px 8px 0;font-size:16px;line-height:1.7;color:#333;margin-bottom:10px}
@@ -58,8 +57,9 @@ td input{width:55px;font-size:10px;font-family:monospace;background:#f5f5f5;bord
 td input.bias{background:#eee}
 td input:focus{outline:none;border-color:#534AB7}
 .wlayer-title{font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.05em;margin:6px 0 3px}
-.szrow{display:flex;align-items:center;gap:6px}
-.szrow input[type=range]{flex:1;accent-color:#534AB7}
+.wmode-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.wmbtn{font-size:11px;padding:3px 9px;border-radius:12px;border:1px solid #ccc;background:#fff;color:#555;cursor:pointer;transition:all .15s}
+.wmbtn.sel{background:#534AB7;color:#fff;border-color:#534AB7}
 </style>
 
 <div class="intro">
@@ -67,7 +67,12 @@ td input:focus{outline:none;border-color:#534AB7}
   <span class="pill pill-i">Input</span> x₁ and x₂ are your feature values.
   <span class="pill pill-h">Hidden</span> neurons apply weights + bias then an activation function.
   <span class="pill pill-o">Output</span> applies a final activation to produce a prediction between 0 and 1.<br>
-  <b>Controls:</b> Drag <code style="background:#eee;border-radius:3px;padding:1px 5px;font-size:12px">x1/x2</code> · <b>▶ Play</b> animates · <code style="background:#eee;border-radius:3px;padding:1px 5px;font-size:12px">‹ ›</code> manual steps · <code style="background:#eee;border-radius:3px;padding:1px 5px;font-size:12px">↺</code> resets · add layers/neurons in sidebar. During animation, computation details appear in the trace panel below the canvas.
+  <b>Controls:</b> 
+  <br>Drag <code style="background:#eee;border-radius:3px;padding:1px 5px;font-size:12px">x1/x2</code><br> 
+  <b>▶ Play</b> animates, <code style="background:#eee;border-radius:3px;padding:1px 5px;font-size:12px">‹ ›</code> manual steps, <code style="background:#eee;border-radius:3px;padding:1px 5px;font-size:12px">↺</code> resets <br>
+  Add layers, neurons, or control weight visibility in <b>sidebar</b> <br>
+  During animation, computation details appear in the trace panel below the canvas <br>
+  You can also <b>click on any neuron</b> to see its input contributions and the activation function applied<br>
 </div>
 
 <div class="root">
@@ -142,6 +147,13 @@ td input:focus{outline:none;border-color:#534AB7}
   </div>
   <div class="card">
     <div class="ctitle">Weights <button class="sbtn" id="btnRand">randomize</button></div>
+    <div style="font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Labels on canvas</div>
+    <div class="wmode-row" id="wmodeRow">
+      <button class="wmbtn" data-wm="none">Hidden</button>
+      <button class="wmbtn sel" data-wm="name">Name only</button>
+      <button class="wmbtn" data-wm="value">Name + value</button>
+    </div>
+    <div style="font-size:10px;color:#aaa;margin-top:4px;margin-bottom:8px">Auto-hidden when a neuron is selected</div>
     <div id="wTables"></div>
   </div>
 </div>
@@ -156,7 +168,7 @@ td input:focus{outline:none;border-color:#534AB7}
   let userCH = 360, actualCH = 360;
   let fScale = 1.0, speedMult = 1.0;
 
-  const PAD_TOP = 100, PAD_BOTTOM = 50, PAD_X_FRAC = 0.08;
+  const PAD_TOP = 120, PAD_BOTTOM = 50, PAD_X_FRAC = 0.08;
   const NR_MIN = 14, NR_MAX = 28, NODE_MIN_GAP = 10;
 
   const ACTS = {
@@ -178,6 +190,8 @@ td input:focus{outline:none;border-color:#534AB7}
 
   let hiddenSizes=[2,2], weights=[], biases=[], acts=[], zs=[];
   let x1v=0.5, x2v=0.8, currentStep=-1, animTimer=null, animRunning=false;
+  let selectedNode=null;
+  let weightMode='name'; // 'none' | 'name' | 'value'
 
   // Popup alpha per destination neuron: key = "l_ni"
   let popupA={}, popupT={};
@@ -341,8 +355,26 @@ td input:focus{outline:none;border-color:#534AB7}
   new ResizeObserver(()=>resizeCanvas()).observe(cv.parentElement);
 
   // ── Visibility ────────────────────────────────────────────────
-  function nodeAlpha(li){ return currentStep<0||li<=currentStep?1:0.18; }
+  function nodeAlpha(li,ni){
+    // animation mode
+    if(currentStep>=0) return li<=currentStep?1:0.18;
+    // static mode with a selected node
+    if(selectedNode){
+      if(li===selectedNode.l && ni===selectedNode.ni) return 1;   // the selected neuron
+      if(li===selectedNode.l-1) return 1;                          // its source layer
+      if(li===0 && selectedNode.l===1) return 1;                   // inputs always visible for first hidden
+      return 0.18;
+    }
+    return 1;
+  }
   function edgeActive(fromL){ return currentStep<0||currentStep>=fromL+1; }
+  function edgeSelAlpha(fromL,fromNi,toNi){
+    // in static mode with selection: only highlight edges going INTO the selected node
+    if(currentStep>=0) return edgeActive(fromL)?1:0.08;
+    if(!selectedNode) return 1;
+    if(fromL===selectedNode.l-1 && toNi===selectedNode.ni) return 1;
+    return 0.06;
+  }
 
   // ── Draw helpers ──────────────────────────────────────────────
   function drawArrow(x1,y1,x2,y2,active){
@@ -397,7 +429,7 @@ td input:focus{outline:none;border-color:#534AB7}
   }
 
   // Floating popup bubble next to a destination neuron showing its weighted sum
-  function drawNeuronPopup(x,y,col,alpha,lines){
+  function drawNeuronPopup(x,y,col,alpha,lines,isDead){
     if(alpha<0.02)return;
     const fsL=fsc(Math.max(8,Math.round(NR*0.38)));
     ctx.font=`${fsL}px monospace`;
@@ -431,7 +463,7 @@ td input:focus{outline:none;border-color:#534AB7}
     ctx.textAlign='left'; ctx.textBaseline='top';
     lines.forEach((l,i)=>{
       // highlight the result line
-      if(i===lines.length-1){ ctx.font=`bold ${fsL}px monospace`; ctx.fillStyle=col; }
+      if(i===lines.length-1){ ctx.font=`bold ${fsL}px monospace`; ctx.fillStyle=isDead?'#111':col; }
       else { ctx.font=`${fsL}px monospace`; ctx.fillStyle='#444'; }
       ctx.fillText(l, bx+pad, by+pad+i*lineH);
     });
@@ -453,21 +485,41 @@ td input:focus{outline:none;border-color:#534AB7}
       ctx.fillText(lbls[li],lx[li],8);
     });
 
-    // Edges — weight labels only, no formulas on edges
+    // Edges
     for(let l=0;l<s.length-1;l++){
       const active=edgeActive(l);
       for(let i=0;i<s[l];i++){
         for(let j=0;j<s[l+1];j++){
-          drawArrow(lx[l],ly[l][i],lx[l+1],ly[l+1][j],active);
-          drawWeightLabel(lx[l],ly[l][i],lx[l+1],ly[l+1][j],`w=${f2(weights[l][j][i])}`,active);
+          const ea=edgeSelAlpha(l,i,j);
+          ctx.save(); ctx.globalAlpha=ea;
+          drawArrow(lx[l],ly[l][i],lx[l+1],ly[l+1][j],active&&ea>0.5);
+          ctx.restore();
+
+          // Weight label visibility:
+          // - If weightMode is 'none': never show
+          // - If a node is selected: only show on the highlighted edges (ea=1), hide all others
+          // - Otherwise: show at normal/dimmed alpha based on edge state
+          const isHighlightedEdge = ea > 0.5;
+          const inSelectionMode = selectedNode && currentStep < 0;
+          const showLabel = weightMode !== 'none' && (!inSelectionMode || isHighlightedEdge);
+
+          if(showLabel){
+            const wName=`w${i+1}.${j+1}`;
+            const label = weightMode==='value' ? `${wName}=${f2(weights[l][j][i])}` : wName;
+            const labelAlpha = inSelectionMode ? 1 : (active ? ea : ea * 0.4);
+            ctx.save(); ctx.globalAlpha=labelAlpha;
+            drawWeightLabel(lx[l],ly[l][i],lx[l+1],ly[l+1][j],label,isHighlightedEdge);
+            ctx.restore();
+          }
         }
       }
     }
 
     // Nodes
     s.forEach((n,li)=>{
-      const isInp=li===0,isOut=li===s.length-1,alp=nodeAlpha(li);
+      const isInp=li===0,isOut=li===s.length-1;
       for(let ni=0;ni<n;ni++){
+        const alp=nodeAlpha(li,ni);
         const x=lx[li],y=ly[li][ni];
         if(isInp){
           drawNode(x,y,`x${ni+1}`,f2(acts[0][ni]),COL.inp,alp,null);
@@ -485,38 +537,48 @@ td input:focus{outline:none;border-color:#534AB7}
       }
     });
 
-    // Neuron popup bubbles (animated fade, only for active step's dest layer)
-    if(currentStep>=1){
-      const destL=currentStep;
-      const s=struct();
-      const isOut=destL===s.length-1;
+    // Neuron popup bubbles — shown during animation OR when a node is selected in static mode
+    const showPopupLayer = currentStep>=1 ? currentStep : (selectedNode&&currentStep<0 ? selectedNode.l : -1);
+    if(showPopupLayer>=1){
+      const destL=showPopupLayer;
+      const sLocal=struct();
+      const isOut=destL===sLocal.length-1;
       const fn=isOut?ACTS[actO].tex:ACTS[actH].tex;
       const col=isOut?COL.out:COL.hid;
+      const neuronList = selectedNode&&currentStep<0 ? [selectedNode.ni] : Array.from({length:sLocal[destL]},(_,o)=>o);
 
-      for(let o=0;o<s[destL];o++){
-        const alpha=popupA[`${destL}_${o}`]||0;
+      for(const o of neuronList){
+        const alpha=currentStep>=1?(popupA[`${destL}_${o}`]||0):1;
         if(alpha<0.02)continue;
         const x=lx[destL],y=ly[destL][o];
         const prev=acts[destL-1];
-
-        // Build popup lines: one line per incoming weight, then z=, then activation
         const lines=[];
         for(let i=0;i<prev.length;i++){
           const w=weights[destL-1][o][i], contrib=w*prev[i];
-          lines.push(`${f2(prev[i])} × ${f2(w)} = ${f2(contrib)}`);
+          const fromName=destL===1?`x${i+1}`:`h${destL-1}.${i+1}`;
+          const wName=`w${i+1}.${o+1}`;
+          lines.push(`${fromName} (${f2(prev[i])}) × ${wName} (${f2(w)}) = ${f2(contrib)}`);
         }
-        // bias line
         lines.push(`bias = ${f2(biases[destL-1][o])}`);
-        // z sum
         const z=zs[destL][o];
-        const weightedSum = prev.reduce((sum, a, i) => sum + weights[destL-1][o][i]*a, 0);
+        const weightedSum=prev.reduce((sum,a,i)=>sum+weights[destL-1][o][i]*a,0);
         lines.push(`z = ${f2(biases[destL-1][o])} + ${f2(weightedSum)} = ${f2(z)}`);
-        // activation result
         const a=acts[destL][o];
         const isDead=a===0;
         lines.push(`${fn}(${f2(z)}) = ${f2(a)}${isDead?' ✕':''}`);
+        drawNeuronPopup(x,y,isDead?COL.dead:col,alpha,lines,isDead);
+      }
 
-        drawNeuronPopup(x,y,isDead?COL.dead:col,alpha,lines);
+      // Draw selection ring around clicked node
+      if(selectedNode&&currentStep<0){
+        const sx=lx[selectedNode.l],sy=ly[selectedNode.l][selectedNode.ni];
+        const nodeCol=selectedNode.l===sLocal.length-1?COL.out:COL.hid;
+        ctx.save();
+        ctx.beginPath(); ctx.arc(sx,sy,NR+5,0,Math.PI*2);
+        ctx.strokeStyle=nodeCol; ctx.lineWidth=2.5;
+        ctx.setLineDash([4,3]); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
       }
     }
 
@@ -541,7 +603,8 @@ td input:focus{outline:none;border-color:#534AB7}
 
         let expr='';
         for(let i=0;i<prev.length;i++){
-          expr+=`${f2(weights[destL-1][o][i])}×${f2(prev[i])}`;
+          const fromName=destL===1?`x${i+1}`:`h${destL-1}.${i+1}`;
+          expr+=`${f2(weights[destL-1][o][i])}(${fromName})×${f2(prev[i])}`;
           if(i<prev.length-1) expr+=' + ';
         }
         expr+=` + ${f2(biases[destL-1][o])}`;
@@ -638,7 +701,7 @@ td input:focus{outline:none;border-color:#534AB7}
     const b=document.getElementById('btnPlay'); b.textContent='▶ Play'; b.className='tbtn go';
   }
   function startAnim(){
-    stopAnim(); animRunning=true;
+    stopAnim(); animRunning=true; selectedNode=null;
     document.getElementById('btnPlay').textContent='■ Stop';
     document.getElementById('btnPlay').className='tbtn';
     if(currentStep>=totalSteps()) currentStep=-1;
@@ -656,13 +719,97 @@ td input:focus{outline:none;border-color:#534AB7}
   document.getElementById('btnPlay').addEventListener('click',()=>animRunning?stopAnim():startAnim());
   document.getElementById('btnPrev').addEventListener('click',()=>{ stopAnim(); currentStep=Math.max(-1,currentStep-1); setPopupTargets(currentStep); triggerAnim(); updateExplain(currentStep); });
   document.getElementById('btnNext').addEventListener('click',()=>{ stopAnim(); currentStep=Math.min(totalSteps(),currentStep+1); forward(); computeLayout(CW_cur); setPopupTargets(currentStep); triggerAnim(); updateExplain(currentStep); });
-  document.getElementById('btnReset').addEventListener('click',()=>{ stopAnim(); currentStep=-1; Object.keys(popupA).forEach(k=>{popupA[k]=0;popupT[k]=0;}); go(); });
+  document.getElementById('btnReset').addEventListener('click',()=>{ stopAnim(); currentStep=-1; selectedNode=null; Object.keys(popupA).forEach(k=>{popupA[k]=0;popupT[k]=0;}); go(); });
   document.getElementById('btnRand').addEventListener('click',()=>{ stopAnim(); currentStep=-1; initW(); go(); });
-  document.getElementById('sx1').addEventListener('input',function(){ x1v=+this.value; document.getElementById('vx1').textContent=f2(x1v); stopAnim(); go(); });
-  document.getElementById('sx2').addEventListener('input',function(){ x2v=+this.value; document.getElementById('vx2').textContent=f2(x2v); stopAnim(); go(); });
+  document.getElementById('sx1').addEventListener('input',function(){ x1v=+this.value; document.getElementById('vx1').textContent=f2(x1v); stopAnim(); selectedNode=null; go(); });
+  document.getElementById('sx2').addEventListener('input',function(){ x2v=+this.value; document.getElementById('vx2').textContent=f2(x2v); stopAnim(); selectedNode=null; go(); });
   document.getElementById('spd').addEventListener('input',function(){ speedMult=+this.value; document.getElementById('vspd').textContent=speedMult.toFixed(1)+'×'; });
   document.getElementById('fsz').addEventListener('input',function(){ fScale=+this.value; document.getElementById('vfsz').textContent=fScale.toFixed(1)+'×'; draw(); });
   document.getElementById('sldH').addEventListener('input',function(){ userCH=+this.value; document.getElementById('vH').textContent=userCH+'px'; const CW=cv.parentElement.clientWidth; if(CW){computeLayout(CW);draw();} });
+  // ── Click to select node in static mode ───────────────────────
+  cv.addEventListener('click',function(e){
+    if(currentStep>=0) return; // only in static mode
+    const rect=cv.getBoundingClientRect();
+    const mx=(e.clientX-rect.left)*(CW_cur/rect.width);
+    const my=(e.clientY-rect.top)*(actualCH/rect.height);
+    const s=struct();
+    let hit=null;
+    s.forEach((n,li)=>{
+      if(li===0) return; // don't select input nodes (no computation to show)
+      for(let ni=0;ni<n;ni++){
+        const dx=mx-lx[li], dy=my-ly[li][ni];
+        if(Math.sqrt(dx*dx+dy*dy)<=NR) hit={l:li,ni};
+      }
+    });
+    if(hit&&selectedNode&&selectedNode.l===hit.l&&selectedNode.ni===hit.ni){
+      selectedNode=null; // click same node again to deselect
+    } else {
+      selectedNode=hit;
+    }
+    draw();
+    // update trace to show selected node's computation
+    if(selectedNode){
+      updateTraceForSelected();
+    } else {
+      updateTrace();
+    }
+  });
+
+  cv.addEventListener('mousemove',function(e){
+    if(currentStep>=0){ cv.style.cursor='default'; return; }
+    const rect=cv.getBoundingClientRect();
+    const mx=(e.clientX-rect.left)*(CW_cur/rect.width);
+    const my=(e.clientY-rect.top)*(actualCH/rect.height);
+    const s=struct();
+    let hit=false;
+    s.forEach((n,li)=>{
+      if(li===0) return;
+      for(let ni=0;ni<n;ni++){
+        const dx=mx-lx[li], dy=my-ly[li][ni];
+        if(Math.sqrt(dx*dx+dy*dy)<=NR) hit=true;
+      }
+    });
+    cv.style.cursor=hit?'pointer':'default';
+  });
+
+  function updateTraceForSelected(){
+    if(!selectedNode) return;
+    const s=struct(), c=document.getElementById('trLines'); c.innerHTML='';
+    const lbl=document.getElementById('trLayerLbl');
+    const destL=selectedNode.l, o=selectedNode.ni;
+    const isOut=destL===s.length-1;
+    lbl.textContent=isOut?'Output layer — o₁':`Hidden layer ${destL} — h${destL}.${o+1}`;
+    const fn=isOut?ACTS[actO].tex:ACTS[actH].tex;
+    const prev=acts[destL-1];
+    const grp=document.createElement('div'); grp.className='trgroup';
+    const glbl=document.createElement('div'); glbl.className='trgroup-lbl';
+    glbl.textContent=isOut?'o₁':`h${destL}.${o+1}`;
+    grp.appendChild(glbl);
+    let expr='';
+    for(let i=0;i<prev.length;i++){
+      const fromName=destL===1?`x${i+1}`:`h${destL-1}.${i+1}`;
+      expr+=`${f2(weights[destL-1][o][i])}(${fromName})×${f2(prev[i])}`;
+      if(i<prev.length-1) expr+=' + ';
+    }
+    expr+=` + ${f2(biases[destL-1][o])}`;
+    const z=zs[destL][o], a=acts[destL][o];
+    [`z = ${expr} = ${f2(z)}`,`${fn}(${f2(z)}) = ${isOut?f4(a):f2(a)}`].forEach(txt=>{
+      const div=document.createElement('div');
+      div.className='trline on'; div.style.marginBottom='1px';
+      div.textContent=txt; grp.appendChild(div);
+    });
+    c.appendChild(grp);
+  }
+
+  document.getElementById('wmodeRow').querySelectorAll('.wmbtn').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.getElementById('wmodeRow').querySelectorAll('.wmbtn').forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel');
+      weightMode=b.dataset.wm;
+      draw();
+    });
+  });
+
   buildLayerCfg(); initW(); buildDots(); forward();
   setTimeout(()=>resizeCanvas(),0);
 })();
