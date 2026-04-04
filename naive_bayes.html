@@ -107,6 +107,10 @@
     margin-bottom: 0.5rem;
   }
 
+  .page-title {
+  margin-bottom: 1.5rem;
+}
+
   .meter-wrap { text-align: center; }
   .meter-emoji { font-size: 2.5rem; margin-bottom: 0.3rem; transition: all 0.3s; }
   .meter-label { font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; }
@@ -259,8 +263,7 @@
 </head>
 <body>
 
-<a class="back" href="index.html">← Back to all visualizations</a>
-
+<h1 class="page-title">Naive Bayes — Spam Detector</h1>
 <div class="explainer">
   <strong>How does it work?</strong><br>
   The AI has seen thousands of emails before. It learned that certain words (like <em>"FREE"</em> or <em>"winner"</em>) appear much more often in spam, while others (like <em>"meeting"</em> or <em>"report"</em>) are normal. When it sees a new email, it looks at each word and asks: <em>"Does this word make it more or less suspicious?"</em> — then combines all the clues to make a final decision.
@@ -366,7 +369,7 @@
 
   <!-- Live numeric computation -->
   <div id="math-running-wrap" style="display:none;">
-    <div class="math-running-label">Live computation — words detected in your email</div>
+    <div class="math-running-label">Score computation for detected words in your email</div>
     <div class="math-running" id="math-running-content"></div>
   </div>
 </div>
@@ -549,7 +552,7 @@
       const openings = big
         ? [`Whoa — <strong>"${word}"</strong> is a massive red flag.`, `Uh oh. <strong>"${word}"</strong> is one of the most common spam words out there.`]
         : [`Hmm, <strong>"${word}"</strong> is a bit suspicious.`, `<strong>"${word}"</strong> raises an eyebrow.`];
-      const body = `Out of every 100 spam emails, ${spamPct} contain this word. There are only ${hamPct} normal emails out of 100 that use this word`;
+      const body = `Out of every 100 spam emails, ${spamPct} contain this word. There are only ${hamPct} normal emails out of 100 that use this word.`;
       const shift = `Suspicion goes from ${(prevPct*100).toFixed(0)}% up to <strong>${(nowPct*100).toFixed(0)}%</strong>.`;
       return openings[Math.floor(Math.random() * openings.length)] + ' ' + body + ' ' + shift;
     }
@@ -599,8 +602,8 @@
   function fmtSci(n) {
     if (n === 0) return '0';
     const exp = Math.floor(Math.log10(Math.abs(n)));
-    if (exp >= -2 && exp <= 2) return n.toPrecision(4);
-    const coeff = (n / Math.pow(10, exp)).toFixed(3);
+    if (exp >= -4 && exp <= 2) return parseFloat(n.toPrecision(3)).toString();
+    const coeff = parseFloat((n / Math.pow(10, exp)).toFixed(3)).toString();
     return `${coeff} × 10<sup>${exp}</sup>`;
   }
 
