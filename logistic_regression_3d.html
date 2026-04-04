@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logistic Regression — 3D</title>
+<script>
+  function loadPlotly(cb) {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.plot.ly/plotly-2.27.0.min.js';
+    s.onload = cb;
+    s.onerror = function() {
+      var s2 = document.createElement('script');
+      s2.src = 'https://unpkg.com/plotly.js-dist-min@2.27.0/plotly.min.js';
+      s2.onload = cb;
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s);
+  }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
+    --text: #1a1917; --muted: #6b6860;
+    --yes: #1D9E75; --yes-light: #f0fdf4; --yes-border: #6ee7b7;
+    --no: #e53e3e; --no-light: #fff5f5; --no-border: #fca5a5;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; min-height: 100vh; }
+
+  .back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
+  .back:hover { color: var(--text); }
+
+  h1 { font-size: 1.45rem; font-weight: 700; margin-bottom: 0.35rem; }
+  .subtitle { color: var(--muted); font-size: 0.92rem; max-width: 760px; line-height: 1.65; margin-bottom: 1.5rem; }
+
+  .explainer {
+    background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b;
+    border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.75rem;
+    font-size: 0.88rem; line-height: 1.7; color: #78350f; max-width: 1000px;
+  }
+  .explainer strong { color: #92400e; }
+
+  /* ── Layout ── */
+  .main-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; max-width: 1050px; align-items: start; }
+  @media (max-width: 800px) { .main-layout { grid-template-columns: 1fr; } }
+
+  /* ── Panel ── */
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .panel-head { background: #f4f3ef; border-bottom: 1px solid var(--border); padding: 0.65rem 1rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  .panel-body { padding: 1rem; }
+
+  .field-label { font-size: 0.8rem; font-weight: 600; color: var(--text); margin-bottom: 0.3rem; display: block; }
+  .field-hint  { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.5rem; }
+  .num-input {
+    width: 100%; padding: 0.5rem 0.7rem; border: 1.5px solid var(--border);
+    border-radius: 7px; font-size: 0.9rem; font-family: var(--sans);
+    color: var(--text); background: #fafaf8; outline: none; transition: border-color 0.2s;
+    margin-bottom: 0.6rem;
+  }
+  .num-input:focus { border-color: #a0aec0; background: #fff; }
+  .num-input::placeholder { color: #c0bbb5; }
+
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem; }
+  .btn-yes, .btn-no {
+    padding: 0.55rem 0.5rem; border: none; border-radius: 7px;
+    font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-yes { background: var(--yes); color: white; }
+  .btn-yes:hover { background: #0d8a62; }
+  .btn-no  { background: var(--no);  color: white; }
+  .btn-no:hover  { background: #c53030; }
+
+  .data-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+  .data-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 8px; border-radius: 6px; font-size: 0.78rem;
+    animation: popIn 0.2s ease;
+  }
+  .data-item.yes { background: var(--yes-light); border: 1px solid var(--yes-border); }
+  .data-item.no  { background: var(--no-light);  border: 1px solid var(--no-border); }
+  .data-item .di-txt { flex: 1; }
+  .data-item .di-lbl { font-weight: 700; margin-left: 6px; }
+  .data-item .di-lbl.yes { color: var(--yes); }
+  .data-item .di-lbl.no  { color: var(--no); }
+  .data-item .di-del { background: none; border: none; cursor: pointer; color: #bbb; font-size: 0.85rem; padding: 0 2px; }
+  .data-item .di-del:hover { color: #555; }
+
+  .data-empty { font-size: 0.8rem; color: #c0bbb5; font-style: italic; text-align: center; padding: 0.75rem 0; }
+  .data-summary { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; font-size: 0.77rem; flex-wrap: wrap; }
+  .ds-badge { padding: 2px 8px; border-radius: 20px; font-weight: 700; }
+  .ds-badge.yes { background: var(--yes-light); color: var(--yes); border: 1px solid var(--yes-border); }
+  .ds-badge.no  { background: var(--no-light);  color: var(--no);  border: 1px solid var(--no-border); }
+
+  /* ── Right side ── */
+  .right-col { display: flex; flex-direction: column; gap: 1rem; }
+
+  /* Tab switcher */
+  .tabs { display: flex; gap: 0; background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .tab-btn { flex: 1; padding: 0.55rem 0.5rem; font-size: 0.82rem; font-weight: 600; background: none; border: none; cursor: pointer; color: var(--muted); transition: all 0.15s; border-bottom: 2px solid transparent; }
+  .tab-btn.active { color: var(--text); background: #f4f3ef; border-bottom-color: #6366f1; }
+
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .chart-head { background: #f4f3ef; border-bottom: 1px solid var(--border); padding: 0.65rem 1rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  #plot3d { width: 100%; height: 400px; }
+  #plot2d { width: 100%; height: 380px; }
+  .chart-note { font-size: 0.77rem; color: var(--muted); padding: 0.5rem 1rem 0.75rem; }
+
+  .not-enough { text-align: center; padding: 2rem; font-size: 0.88rem; color: var(--muted); font-style: italic; }
+
+  /* ── Inference ── */
+  .inf-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 1050px; margin-top: 1.5rem; }
+  .inf-head { background: #f4f3ef; border-bottom: 1px solid var(--border); padding: 0.65rem 1rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  .inf-body { padding: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center; }
+  .inf-sliders { display: flex; flex-direction: column; gap: 1rem; }
+  @media (max-width: 700px) { .inf-body { grid-template-columns: 1fr; } }
+
+  .inf-group label { font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 0.4rem; }
+  .inf-slider-row { display: flex; align-items: center; gap: 0.6rem; }
+  .inf-slider { flex: 1; accent-color: #6366f1; }
+  .inf-val { font-family: var(--mono); font-size: 0.95rem; font-weight: 700; color: #6366f1; min-width: 28px; }
+
+  .inf-result { text-align: center; }
+  .inf-prob { font-size: 3rem; font-weight: 800; line-height: 1; margin-bottom: 0.25rem; transition: color 0.4s; }
+  .inf-verdict { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.6rem; }
+  .prob-track { height: 10px; background: #eee; border-radius: 5px; overflow: hidden; margin-bottom: 0.3rem; }
+  .prob-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease, background 0.5s ease; }
+  .prob-ticks { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); }
+
+  .inf-explain {
+    font-size: 0.82rem; color: var(--muted); line-height: 1.65;
+    background: #fafaf8; border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.75rem; margin-top: 0;
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+</style>
+</head>
+<body>
+
+<h1>📊 Logistic Regression in 3D — Two Features</h1>
+<p class="subtitle">Now the model has two inputs: <strong>study hours</strong> and <strong>sleep hours</strong>. The model learns how both affect your chance of passing and draws a probability surface in 3D.</p>
+
+<div class="explainer">
+  <strong>💡 Why 3D?</strong> When you have two features, the probability becomes a <strong>surface</strong> instead of a curve. Imagine a hilly landscape where high ground indicates likeliness to pass, while low ground indicates likeliness to fail. The flat middle (50%) becomes a <em>line</em> instead of a point, which is the decision boundary. Rotate the 3D chart to explore it!
+</div>
+
+<div class="main-layout">
+  <!-- Left: input -->
+  <div>
+    <div class="panel">
+      <div class="panel-head">📝 Add a data point</div>
+      <div class="panel-body">
+        <label class="field-label">📚 Study hours</label>
+        <span class="field-hint">How many hours did they study?</span>
+        <input type="number" id="inp1" class="num-input" placeholder="e.g. 4" min="0" max="12" step="0.5">
+
+        <label class="field-label">😴 Sleep hours</label>
+        <span class="field-hint">How many hours did they sleep that night?</span>
+        <input type="number" id="inp2" class="num-input" placeholder="e.g. 7" min="0" max="12" step="0.5">
+
+        <div class="btn-row">
+          <button class="btn-yes" id="btnYes">  Passed</button>
+          <button class="btn-no"  id="btnNo" >  Failed</button>
+        </div>
+
+        <div id="dataSummary" class="data-summary" style="display:none;"></div>
+        <div class="data-list" id="dataList">
+          <div class="data-empty">No data yet — add some above!</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:0.75rem;padding:0.85rem;background:var(--card);border:1px solid var(--border);border-radius:10px;font-size:0.78rem;color:var(--muted);line-height:1.6;">
+      💡 Try mixing it up. See if someone who studied a lot, but barely slept can still pass!
+    </div>
+  </div>
+
+  <!-- Right: charts -->
+  <div class="right-col">
+    <div class="tabs">
+      <button class="tab-btn active" id="tab3d" onclick="switchTab('3d')">🌐 3D Surface</button>
+      <button class="tab-btn" id="tab2d" onclick="switchTab('2d')">🗺️ 2D Top-down View</button>
+    </div>
+
+    <div class="chart-card" id="card3d">
+      <div class="chart-head">Probability surface — drag to rotate</div>
+      <div id="plot3d"></div>
+      <p class="chart-note">Z-axis = probability of passing. Green dots = passed, red dots = failed. The surface is the model's prediction for every possible combination of study + sleep hours.</p>
+    </div>
+
+    <div class="chart-card" id="card2d" style="display:none;">
+      <div class="chart-head">Top-down view — decision boundary line</div>
+      <svg id="svg2d" viewBox="0 0 520 360" style="width:100%;display:block;"></svg>
+      <p class="chart-note">Each dot is a student. The dashed purple line is the boundary. Above it the model predicts "Pass", below it "Fail".</p>
+    </div>
+  </div>
+</div>
+
+<!-- Inference -->
+<div class="inf-card">
+  <div class="inf-head">🔮 Try a prediction</div>
+  <div class="inf-body" id="infBody">
+    <div class="not-enough" style="grid-column:1/-1;">Add data and fit the model first.</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const sigmoid = z => 1 / (1 + Math.exp(-z));
+
+  let data = [
+    { x1: 1.0, x2: 3.0, y: 0 },
+    { x1: 2.0, x2: 4.0, y: 0 },
+    { x1: 1.5, x2: 5.0, y: 0 },
+    { x1: 3.0, x2: 3.0, y: 0 },
+    { x1: 5.0, x2: 7.0, y: 1 },
+    { x1: 6.0, x2: 6.0, y: 1 },
+    { x1: 7.0, x2: 5.0, y: 1 },
+    { x1: 4.0, x2: 8.0, y: 1 },
+    { x1: 8.0, x2: 2.0, y: 0 },
+    { x1: 3.5, x2: 7.5, y: 1 },
+  ];
+
+  let w1 = 0, w2 = 0, b = 0, fitted = false;
+  let infX1 = 5, infX2 = 6;
+
+  // ── Fit model ─────────────────────────────────────────────
+  function fit() {
+    const hasPos = data.some(d => d.y === 1);
+    const hasNeg = data.some(d => d.y === 0);
+    if (data.length < 4 || !hasPos || !hasNeg) { fitted = false; return; }
+
+    const x1s = data.map(d => d.x1), x2s = data.map(d => d.x2);
+    const x1min = Math.min(...x1s), x1max = Math.max(...x1s);
+    const x2min = Math.min(...x2s), x2max = Math.max(...x2s);
+    const r1 = x1max - x1min || 1, r2 = x2max - x2min || 1;
+    const n1 = x => (x - x1min) / r1;
+    const n2 = x => (x - x2min) / r2;
+
+    let _w1 = 0, _w2 = 0, _b = 0;
+    const lr = 0.6;
+    for (let i = 0; i < 5000; i++) {
+      let dw1 = 0, dw2 = 0, db = 0;
+      data.forEach(d => {
+        const p = sigmoid(_w1 * n1(d.x1) + _w2 * n2(d.x2) + _b);
+        const e = p - d.y;
+        dw1 += e * n1(d.x1);
+        dw2 += e * n2(d.x2);
+        db  += e;
+      });
+      _w1 -= lr * dw1 / data.length;
+      _w2 -= lr * dw2 / data.length;
+      _b  -= lr * db  / data.length;
+    }
+    // convert back to original scale
+    w1 = _w1 / r1;
+    w2 = _w2 / r2;
+    b  = _b - _w1 * x1min / r1 - _w2 * x2min / r2;
+    fitted = true;
+  }
+
+  function predict(x1, x2) { return sigmoid(w1 * x1 + w2 * x2 + b); }
+
+  // ── 3D Plot ───────────────────────────────────────────────
+  let plot3dInit = false;
+  function draw3d() {
+      const STEPS = 30, MIN = 0, MAX = 12;
+
+      const surfX = [], surfY = [], surfZ = [];
+      for (let i = 0; i <= STEPS; i++) {
+        const row_x = [], row_y = [], row_z = [];
+        const xv = MIN + (MAX - MIN) * i / STEPS;
+        for (let j = 0; j <= STEPS; j++) {
+          const yv = MIN + (MAX - MIN) * j / STEPS;
+          row_x.push(xv); row_y.push(yv);
+          row_z.push(fitted ? predict(xv, yv) : 0.5);
+        }
+        surfX.push(row_x); surfY.push(row_y); surfZ.push(row_z);
+      }
+
+      const passData = data.filter(d => d.y === 1);
+      const failData = data.filter(d => d.y === 0);
+
+      // Dots BEFORE surface so Plotly renders them on top, not buried underneath
+      const traces = [
+        {
+          type: 'scatter3d',
+          x: passData.map(d => d.x1), y: passData.map(d => d.x2),
+          z: passData.map(() => 1.0),  // pin at ceiling, always visible above surface
+          mode: 'markers',
+          marker: { size: 8, color: '#1D9E75', symbol: 'circle', line: { color: 'white', width: 2 } },
+          name: 'Passed'
+        },
+        {
+          type: 'scatter3d',
+          x: failData.map(d => d.x1), y: failData.map(d => d.x2),
+          z: failData.map(() => 0.0),  // pin at floor, always visible below surface
+          mode: 'markers',
+          marker: { size: 8, color: '#e53e3e', symbol: 'circle', line: { color: 'white', width: 2 } },
+          name: 'Failed'
+        },
+        {
+          type: 'surface', x: surfX, y: surfY, z: surfZ,
+          colorscale: [
+            [0, '#fee2e2'], [0.5, '#fef9c3'], [1, '#dcfce7']
+          ],
+          cmin: 0, cmax: 1,
+          opacity: 0.70,
+          showscale: true,
+          colorbar: { title: 'P(Pass)', len: 0.5, thickness: 12, tickfont: { size: 10 } },
+          contours: { z: { show: true, usecolormap: true, project: { z: false } } },
+          name: 'Probability surface'
+        }
+      ];
+
+      const layout = {
+        margin: { l: 0, r: 0, t: 10, b: 0 },
+        paper_bgcolor: '#fafaf8',
+        scene: {
+          xaxis: { title: 'Study Hours', range: [0, 12], gridcolor: '#ddd' },
+          yaxis: { title: 'Sleep Hours', range: [0, 12], gridcolor: '#ddd' },
+          zaxis: { title: 'P(Pass)', range: [-0.05, 1.1], tickformat: '.0%', gridcolor: '#ddd' },
+          camera: { eye: { x: 1.6, y: -1.6, z: 1.2 } },
+          bgcolor: '#fafaf8'
+        },
+        legend: { x: 0.01, y: 0.98, font: { size: 11 } },
+        font: { family: 'IBM Plex Sans', size: 11 }
+      };
+
+      if (!plot3dInit) {
+        Plotly.newPlot('plot3d', traces, layout, { responsive: true, displayModeBar: false });
+        plot3dInit = true;
+      } else {
+        Plotly.react('plot3d', traces, layout, { responsive: true, displayModeBar: false });
+      }
+  }
+
+  // ── 2D SVG ────────────────────────────────────────────────
+  const S = { w: 520, h: 360, pl: 52, pr: 20, pt: 20, pb: 44 };
+  const cw = S.w - S.pl - S.pr, ch = S.h - S.pt - S.pb;
+  const MIN2 = 0, MAX2 = 12;
+  const cx = v => S.pl + (v - MIN2) / (MAX2 - MIN2) * cw;
+  const cy = v => S.pt + (1 - v / MAX2) * ch;
+  const ns = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs) {
+    const e = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+    return e;
+  }
+  function svgTxt(x, y, str, attrs = {}) {
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y);
+    Object.entries(attrs).forEach(([k, v]) => t.setAttribute(k, v));
+    t.textContent = str; return t;
+  }
+
+  function draw2d() {
+    const svg = document.getElementById('svg2d');
+    svg.innerHTML = '';
+
+    // Background
+    svg.appendChild(svgEl('rect', { x: S.pl, y: S.pt, width: cw, height: ch, fill: '#fafaf8', rx: 4 }));
+
+    // Grid
+    [0,2,4,6,8,10,12].forEach(v => {
+      svg.appendChild(svgEl('line', { x1: cx(v), y1: S.pt, x2: cx(v), y2: S.pt+ch, stroke: '#e8e5de', 'stroke-width': 0.5 }));
+      svg.appendChild(svgTxt(cx(v), S.pt+ch+14, v, { 'text-anchor': 'middle', fill: '#999', 'font-size': 10, 'font-family': 'IBM Plex Mono' }));
+      svg.appendChild(svgEl('line', { x1: S.pl, y1: cy(v), x2: S.pl+cw, y2: cy(v), stroke: '#e8e5de', 'stroke-width': 0.5 }));
+      svg.appendChild(svgTxt(S.pl-6, cy(v)+4, v, { 'text-anchor': 'end', fill: '#999', 'font-size': 10, 'font-family': 'IBM Plex Mono' }));
+    });
+
+    // Axes
+    svg.appendChild(svgEl('line', { x1: S.pl, y1: S.pt, x2: S.pl, y2: S.pt+ch, stroke: '#ccc', 'stroke-width': 1 }));
+    svg.appendChild(svgEl('line', { x1: S.pl, y1: S.pt+ch, x2: S.pl+cw, y2: S.pt+ch, stroke: '#ccc', 'stroke-width': 1 }));
+
+    // Axis labels
+    svg.appendChild(svgTxt(S.pl + cw/2, S.pt+ch+32, 'Study Hours', { 'text-anchor': 'middle', fill: '#888', 'font-size': 11, 'font-family': 'IBM Plex Sans' }));
+    const yl = document.createElementNS(ns, 'text');
+    yl.setAttribute('transform', 'rotate(-90)');
+    yl.setAttribute('x', -(S.pt + ch/2));
+    yl.setAttribute('y', 14);
+    yl.setAttribute('text-anchor', 'middle');
+    yl.setAttribute('fill', '#888');
+    yl.setAttribute('font-size', '11');
+    yl.setAttribute('font-family', 'IBM Plex Sans');
+    yl.textContent = 'Sleep Hours';
+    svg.appendChild(yl);
+
+    // Decision boundary: w1*x1 + w2*x2 + b = 0  →  x2 = (-w1*x1 - b) / w2
+    if (fitted && Math.abs(w2) > 0.001) {
+      const pts = [];
+      for (let x1v = 0; x1v <= 12; x1v += 0.5) {
+        const x2v = (-w1 * x1v - b) / w2;
+        if (x2v >= 0 && x2v <= 12) pts.push(`${cx(x1v)},${cy(x2v)}`);
+      }
+      if (pts.length >= 2) {
+        svg.appendChild(svgEl('path', {
+          d: 'M' + pts.join('L'),
+          fill: 'none', stroke: '#6366f1', 'stroke-width': 2,
+          'stroke-dasharray': '6,3'
+        }));
+        // Label
+        const mid = Math.floor(pts.length / 2);
+        const [mx, my] = pts[mid].split(',').map(Number);
+        const lbl = document.createElementNS(ns, 'text');
+        lbl.setAttribute('x', mx + 6); lbl.setAttribute('y', my - 5);
+        lbl.setAttribute('fill', '#6366f1'); lbl.setAttribute('font-size', '9');
+        lbl.setAttribute('font-family', 'IBM Plex Mono');
+        lbl.textContent = 'boundary';
+        svg.appendChild(lbl);
+
+        // Zone labels
+        svg.appendChild(svgTxt(S.pl + cw - 8, S.pt + 18, '  Pass zone', { 'text-anchor': 'end', fill: '#1D9E75', 'font-size': 10, 'font-family': 'IBM Plex Sans', opacity: 0.7 }));
+        svg.appendChild(svgTxt(S.pl + 8, S.pt + ch - 8, '  Fail zone', { fill: '#e53e3e', 'font-size': 10, 'font-family': 'IBM Plex Sans', opacity: 0.7 }));
+      }
+    }
+
+    // Data points
+    data.forEach(d => {
+      const color = d.y === 1 ? '#1D9E75' : '#e53e3e';
+      svg.appendChild(svgEl('circle', {
+        cx: cx(d.x1), cy: cy(d.x2), r: 7,
+        fill: color, stroke: 'white', 'stroke-width': 1.5, opacity: 0.85
+      }));
+    });
+  }
+
+  // ── Data list ─────────────────────────────────────────────
+  function renderList() {
+    const list = document.getElementById('dataList');
+    const sum  = document.getElementById('dataSummary');
+    if (data.length === 0) {
+      list.innerHTML = '<div class="data-empty">No data yet — add some above!</div>';
+      sum.style.display = 'none'; return;
+    }
+    const pc = data.filter(d => d.y === 1).length;
+    const fc = data.filter(d => d.y === 0).length;
+    sum.style.display = 'flex';
+    sum.innerHTML = `<span class="ds-badge yes">  ${pc} passed</span><span class="ds-badge no">  ${fc} failed</span>`;
+    list.innerHTML = data.map((d, i) => `
+      <div class="data-item ${d.y === 1 ? 'yes' : 'no'}">
+        <span class="di-txt"><strong>${d.x1}h</strong> studied,  <strong>${d.x2}h</strong> slept</span>
+        <span class="di-lbl ${d.y === 1 ? 'yes' : 'no'}">${d.y === 1 ? 'Pass' : 'Fail'}</span>
+        <button class="di-del" data-i="${i}">✕</button>
+      </div>`).join('');
+    list.querySelectorAll('.di-del').forEach(btn =>
+      btn.addEventListener('click', () => { data.splice(+btn.dataset.i, 1); refresh(); })
+    );
+  }
+
+  // ── Inference ─────────────────────────────────────────────
+  function renderInf() {
+    const body = document.getElementById('infBody');
+    if (!fitted) {
+      body.innerHTML = `<div class="not-enough" style="grid-column:1/-1;">Add at least 4 data points (with both   and  ) to enable predictions.</div>`;
+      return;
+    }
+    const prob = predict(infX1, infX2);
+    const pct  = (prob * 100).toFixed(0);
+    const color = prob >= 0.75 ? 'var(--yes)' : prob >= 0.4 ? '#f59e0b' : 'var(--no)';
+    const verdict = prob >= 0.75 ? '  Likely to Pass'
+      : prob >= 0.5  ? 'Probably Pass'
+      : prob >= 0.25 ? 'Probably Fail'
+      : '  Likely to Fail';
+
+    const moreStudy  = w1 > 0 ? 'More study hours means higher chance of passing.' : 'Study hours don\'t seem to help much in your data.';
+    const moreSleep  = w2 > 0 ? 'More sleep means higher chance of passing.' : 'Sleep hours don\'t seem to matter much in your data.';
+    const dominant   = Math.abs(w1) > Math.abs(w2) ? 'Study hours matter more than sleep in your data.' : 'Sleep hours matter more than study hours in your data!';
+
+    body.innerHTML = `
+      <div class="inf-sliders">
+        <div class="inf-group">
+          <label>📚 Study hours planned</label>
+          <div class="inf-slider-row">
+            <input type="range" class="inf-slider" id="sl1" min="0" max="12" step="0.5" value="${infX1}">
+            <span class="inf-val" id="vl1">${infX1}</span>
+          </div>
+        </div>
+        <div class="inf-group">
+          <label>😴 Sleep hours planned</label>
+          <div class="inf-slider-row">
+            <input type="range" class="inf-slider" id="sl2" min="0" max="12" step="0.5" value="${infX2}">
+            <span class="inf-val" id="vl2">${infX2}</span>
+          </div>
+        </div>
+        <div class="inf-explain" id="infExplain">
+          ${moreStudy}<br>${moreSleep}<br><em>${dominant}</em>
+        </div>
+      </div>
+      <div class="inf-result">
+        <div class="inf-prob" id="infProb" style="color:${color};">${pct}%</div>
+        <div class="inf-verdict" id="infVerdict" style="color:${color};">${verdict}</div>
+        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.4rem;">chance of passing</div>
+        <div class="prob-track"><div class="prob-fill" id="infBar" style="width:${pct}%;background:${color};"></div></div>
+        <div class="prob-ticks"><span style="font-size:0.85rem;">0%</span><span style="font-size:0.85rem;">50%</span><span style="font-size:0.85rem;">100%</span></div>
+      </div>
+    `;
+
+    document.getElementById('sl1').addEventListener('input', e => {
+      infX1 = parseFloat(e.target.value);
+      document.getElementById('vl1').textContent = infX1;
+      updateInf();
+    });
+    document.getElementById('sl2').addEventListener('input', e => {
+      infX2 = parseFloat(e.target.value);
+      document.getElementById('vl2').textContent = infX2;
+      updateInf();
+    });
+  }
+
+  function updateInf() {
+    if (!fitted) return;
+    const prob = predict(infX1, infX2);
+    const pct  = (prob * 100).toFixed(0);
+    const color = prob >= 0.75 ? 'var(--yes)' : prob >= 0.4 ? '#f59e0b' : 'var(--no)';
+    const verdict = prob >= 0.75 ? '  Likely to Pass'
+      : prob >= 0.5  ? 'Probably Pass'
+      : prob >= 0.25 ? 'Probably Fail'
+      : '  Likely to Fail';
+    const moreStudy = w1 > 0 ? 'More study hours means higher chance of passing.' : 'Study hours don\'t seem to help much in your data.';
+    const moreSleep = w2 > 0 ? 'More sleep means higher chance of passing.' : 'Sleep hours don\'t seem to matter much in your data.';
+    const dominant  = Math.abs(w1) > Math.abs(w2) ? 'Study hours matter more than sleep in your data.' : 'Sleep hours matter more than study hours in your data!';
+    document.getElementById('infProb').textContent    = pct + '%';
+    document.getElementById('infProb').style.color    = color;
+    document.getElementById('infVerdict').textContent = verdict;
+    document.getElementById('infVerdict').style.color = color;
+    document.getElementById('infBar').style.width     = pct + '%';
+    document.getElementById('infBar').style.background = color;
+    const expl = document.getElementById('infExplain');
+    if (expl) expl.innerHTML = `${moreStudy}<br>${moreSleep}<br><em>${dominant}</em>`;
+  }
+
+  // ── Tab switch ────────────────────────────────────────────
+  window.switchTab = function (tab) {
+    document.getElementById('card3d').style.display = tab === '3d' ? 'block' : 'none';
+    document.getElementById('card2d').style.display = tab === '2d' ? 'block' : 'none';
+    document.getElementById('tab3d').classList.toggle('active', tab === '3d');
+    document.getElementById('tab2d').classList.toggle('active', tab === '2d');
+    if (tab === '3d') draw3d();
+    if (tab === '2d') draw2d();
+  };
+
+  // ── Add data ──────────────────────────────────────────────
+  function addPoint(y) {
+    const v1 = parseFloat(document.getElementById('inp1').value);
+    const v2 = parseFloat(document.getElementById('inp2').value);
+    const invalid = (v, el) => {
+      if (isNaN(v) || v < 0 || v > 12) {
+        document.getElementById(el).style.borderColor = '#e53e3e';
+        setTimeout(() => document.getElementById(el).style.borderColor = '', 1000);
+        return true;
+      }
+      return false;
+    };
+    if (invalid(v1, 'inp1') | invalid(v2, 'inp2')) return;
+    data.push({ x1: v1, x2: v2, y });
+    document.getElementById('inp1').value = '';
+    document.getElementById('inp2').value = '';
+    document.getElementById('inp1').focus();
+    refresh();
+  }
+
+  document.getElementById('btnYes').addEventListener('click', () => addPoint(1));
+  document.getElementById('btnNo' ).addEventListener('click', () => addPoint(0));
+
+  // ── Full refresh ──────────────────────────────────────────
+  function refresh() {
+    fit();
+    const active = document.getElementById('tab3d').classList.contains('active') ? '3d' : '2d';
+    if (active === '3d') draw3d(); else draw2d();
+    renderList();
+    renderInf();
+  }
+
+  // Fit and render UI immediately; draw3d only after Plotly is loaded
+  fit();
+  renderList();
+  renderInf();
+  loadPlotly(function() { draw3d(); });
+})();
+</script>
+</body>
+</html>

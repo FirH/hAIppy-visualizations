@@ -4,142 +4,517 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>03 — Logistic Regression</title>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
     --text: #1a1917; --muted: #6b6860;
-    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+    --yes: #1D9E75; --yes-light: #f0fdf4; --yes-border: #6ee7b7;
+    --no: #e53e3e;  --no-light: #fff5f5;  --no-border: #fca5a5;
+    --curve: #6366f1;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
   }
-  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; min-height: 100vh; }
+
   .back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
   .back:hover { color: var(--text); }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 780px; }
-  .card-header { padding: 18px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
-  .card-idx { font-family: var(--mono); font-size: 10px; color: var(--muted); }
-  .card-title { font-size: 14px; font-weight: 600; flex: 1; }
-  .card-tag { font-family: var(--mono); font-size: 10px; background: #eef2e8; color: #1D6F4A; padding: 2px 8px; border-radius: 3px; }
-  .card-body { padding: 24px; overflow-x: auto; }
-  .ctrl-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
-  .ctrl-label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-  input[type="range"] { accent-color: #1D6F4A; width: 160px; }
-  .val-badge { font-family: var(--mono); font-size: 11px; background: #f0ede6; padding: 2px 8px; border-radius: 4px; min-width: 40px; text-align: center; }
-  .legend-row { display: flex; gap: 16px; margin-top: 12px; font-size: 11px; color: var(--muted); flex-wrap: wrap; align-items: center; }
-  .legend-row span { display: flex; align-items: center; gap: 5px; }
-  .leg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  .leg-line { width: 16px; height: 2px; display: inline-block; }
+
+  h1 { font-size: 1.45rem; font-weight: 700; margin-bottom: 0.35rem; }
+  .subtitle { color: var(--muted); font-size: 0.92rem; max-width: 680px; line-height: 1.65; margin-bottom: 1.75rem; }
+
+  .explainer {
+    background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b;
+    border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.75rem;
+    font-size: 0.88rem; line-height: 1.7; color: #78350f; max-width: 860px;
+  }
+  .explainer strong { color: #92400e; }
+
+  /* ── Main layout ── */
+  .main-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; max-width: 1000px; align-items: stretch; }
+  @media (max-width: 760px) { .main-layout { grid-template-columns: 1fr; } }
+
+  /* ── Left panel ── */
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .panel-head { background: #f4f3ef; border-bottom: 1px solid var(--border); padding: 0.7rem 1rem; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  .panel-body { padding: 1rem; }
+
+  .input-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
+  .hours-input {
+    flex: 1; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border);
+    border-radius: 7px; font-size: 0.95rem; font-family: var(--sans);
+    color: var(--text); background: #fafaf8; outline: none;
+    transition: border-color 0.2s;
+  }
+  .hours-input:focus { border-color: #a0aec0; background: #fff; }
+  .hours-input::placeholder { color: #c0bbb5; }
+
+  .btn-yes, .btn-no {
+    padding: 0.55rem 0.9rem; border: none; border-radius: 7px;
+    font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-yes { background: var(--yes); color: white; }
+  .btn-yes:hover { background: #0d8a62; }
+  .btn-no  { background: var(--no);  color: white; }
+  .btn-no:hover  { background: #c53030; }
+
+  .data-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+  .data-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 8px; border-radius: 6px; font-size: 0.82rem;
+    animation: popIn 0.2s ease;
+  }
+  .data-item.yes { background: var(--yes-light); border: 1px solid var(--yes-border); }
+  .data-item.no  { background: var(--no-light);  border: 1px solid var(--no-border); }
+  .data-item .di-label { font-weight: 600; }
+  .data-item .di-label.yes { color: var(--yes); }
+  .data-item .di-label.no  { color: var(--no); }
+  .data-item .di-del {
+    background: none; border: none; cursor: pointer;
+    color: #bbb; font-size: 0.9rem; padding: 0 2px; line-height: 1;
+  }
+  .data-item .di-del:hover { color: #666; }
+
+  .data-empty { font-size: 0.82rem; color: #c0bbb5; font-style: italic; text-align: center; padding: 1rem 0; }
+
+  .data-summary { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; font-size: 0.8rem; }
+  .ds-badge { padding: 3px 10px; border-radius: 20px; font-weight: 700; }
+  .ds-badge.yes { background: var(--yes-light); color: var(--yes); border: 1px solid var(--yes-border); }
+  .ds-badge.no  { background: var(--no-light);  color: var(--no);  border: 1px solid var(--no-border); }
+
+  /* ── Right panel ── */
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; height: 100%; }
+  .chart-head { background: #f4f3ef; border-bottom: 1px solid var(--border); padding: 0.7rem 1rem; display: flex; align-items: center; justify-content: space-between; }
+  .chart-head-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  .chart-legend { display: flex; gap: 1rem; font-size: 0.75rem; color: var(--muted); }
+  .chart-legend span { display: flex; align-items: center; gap: 4px; }
+  .leg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .leg-line { width: 14px; height: 2.5px; display: inline-block; border-radius: 2px; }
+  .chart-body { padding: 0.5rem 1rem 0.25rem; flex: 1; display: flex; flex-direction: column; }
+
+  svg { display: block; width: 100%; flex: 1; height: 0; min-height: 0; }
+
+  /* ── Inference panel ── */
+  .inference-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 1.5rem; max-width: 1000px; }
+  .inf-head { background: #f4f3ef; border-bottom: 1px solid var(--border); padding: 0.7rem 1rem; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  .inf-body { padding: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center; }
+  @media (max-width: 600px) { .inf-body { grid-template-columns: 1fr; } }
+
+  .inf-left label { font-size: 0.88rem; font-weight: 600; color: var(--text); display: block; margin-bottom: 0.5rem; }
+  .inf-slider-row { display: flex; align-items: center; gap: 0.75rem; }
+  .inf-slider { flex: 1; accent-color: var(--curve); height: 6px; }
+  .inf-val { font-family: var(--mono); font-size: 1rem; font-weight: 700; color: var(--curve); min-width: 30px; }
+  .inf-unit { font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; }
+
+  .inf-result { text-align: center; }
+  .inf-prob-big { font-size: 2.8rem; font-weight: 800; line-height: 1; margin-bottom: 0.3rem; transition: color 0.4s; }
+  .inf-verdict { font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; }
+
+  .prob-bar-track { height: 12px; background: #eee; border-radius: 6px; overflow: hidden; margin-bottom: 0.5rem; }
+  .prob-bar-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease, background 0.5s ease; }
+
+  .inf-explain {
+    font-size: 0.83rem; color: var(--muted); line-height: 1.6;
+    background: #fafaf8; border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.75rem 0.9rem; margin-top: 0.75rem;
+  }
+
+  .not-enough { text-align: center; padding: 1rem; font-size: 0.88rem; color: var(--muted); font-style: italic; }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.95) translateY(-2px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
 </style>
 </head>
 <body>
-<a class="back" href="index.html">← Back to all visualizations</a>
-<div class="card">
-  <div class="card-header">
-    <span class="card-idx">03</span>
-    <span class="card-title">Logistic Regression — Sigmoid Explorer</span>
-    <span class="card-tag">Module 8C</span>
-  </div>
-  <div class="card-body">
-    <div class="ctrl-row">
-      <span class="ctrl-label">Weight w₁</span>
-      <input type="range" id="lr-w1" min="-3" max="3" step="0.1" value="1.5">
-      <span class="val-badge" id="lr-w1-val">1.5</span>
-      <span class="ctrl-label" style="margin-left:12px">Bias w₀</span>
-      <input type="range" id="lr-w0" min="-4" max="4" step="0.1" value="0">
-      <span class="val-badge" id="lr-w0-val">0.0</span>
+
+<h1>📈 Logistic Regression — Will I Pass the Exam?</h1>
+<p class="subtitle">Add your own data: how many hours someone studied, and whether they passed or failed. The model will learn the pattern and predict the probability of passing.</p>
+
+<div class="explainer">
+  <strong>💡 What's happening here?</strong><br>
+  Logistic Regression is a model that answers yes/no questions using probabilities rather than absoulte answer. If you give it examples, such as
+  "<strong>failed</strong> after spending <strong>2 hours of study</strong>" or "<strong>passed</strong> after spending <strong>6 hours of study</strong>", it finds a <strong>S-shaped curve</strong>
+  that best fits your data. It tells the <em>probability</em> of passing given the amount of study hours, not just a "yes" or "no"
+</div>
+
+<div class="main-layout">
+  <!-- Left: data input -->
+  <div>
+    <div class="panel">
+      <div class="panel-head">📝 Add your data</div>
+      <div class="panel-body">
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.65rem;line-height:1.5;">
+          Enter study hours, then click whether that person <strong>passed</strong> or <strong>failed</strong>.
+        </div>
+        <div class="input-row">
+          <input type="number" id="hoursInput" class="hours-input" placeholder="e.g. 4.5" min="0" max="12" step="0.5">
+          <span style="font-size:0.78rem;color:var(--muted);white-space:nowrap;">hrs</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem;">
+          <button class="btn-yes" id="btnYes">Passed</button>
+          <button class="btn-no"  id="btnNo" >Failed</button>
+        </div>
+
+        <div id="dataSummary" class="data-summary" style="display:none;"></div>
+        <div class="data-list" id="dataList">
+          <div class="data-empty" id="dataEmpty">No data yet. Add some above!</div>
+        </div>
+      </div>
     </div>
-    <div id="lr-container"></div>
-    <div class="legend-row">
-      <span><span class="leg-dot" style="background:#534AB7"></span> Class 1</span>
-      <span><span class="leg-dot" style="background:#D85A30"></span> Class 0</span>
-      <span><span class="leg-line" style="background:#534AB7"></span> σ(z) curve</span>
-      <span><span class="leg-line" style="background:#D85A30"></span> Decision boundary (dashed)</span>
+
+    <div style="margin-top:0.75rem;padding:0.85rem;background:var(--card);border:1px solid var(--border);border-radius:10px;font-size:0.8rem;color:var(--muted);line-height:1.6;">
+      💡 <strong>Try it:</strong> Add a few "failed" points with low hours (1–3) and "passed" points with higher hours (5–8). Then use the inference panel below to predict your own hours!
+    </div>
+  </div>
+
+  <!-- Right: chart -->
+  <div class="chart-card">
+    <div class="chart-head">
+      <span class="chart-head-title">📊 Probability Curve</span>
+      <div class="chart-legend">
+        <span><span class="leg-dot" style="background:var(--yes);"></span> Passed</span>
+        <span><span class="leg-dot" style="background:var(--no);"></span> Failed</span>
+        <span><span class="leg-line" style="background:var(--curve);"></span> Model curve</span>
+      </div>
+    </div>
+    <div class="chart-body">
+      <svg id="chartSvg" viewBox="0 0 580 280"></svg>
+      <div id="chartMsg" class="not-enough">Add at least 3 data points (including both   and  ) to fit the curve.</div>
     </div>
   </div>
 </div>
 
+<!-- Inference -->
+<div class="inference-card">
+  <div class="inf-head">Try it yourself</div>
+  <div class="inf-body" id="inferenceBody">
+    <div class="not-enough" style="grid-column:1/-1;">Add data and fit the model first to use predictions.</div>
+  </div>
+</div>
+
 <script>
-(function() {
-  const sigmoid = z => 1 / (1 + Math.exp(-z));
-  const pts = [
-    {x:-3.2,y:0},{x:-2.8,y:1},{x:-2.5,y:0},{x:-2.1,y:0},{x:-1.9,y:0},
-    {x:-1.5,y:0},{x:-1.2,y:1},{x:-0.9,y:0},{x:-0.5,y:0},{x:-0.3,y:1},
-    {x:0.1,y:1},{x:0.4,y:0},{x:0.7,y:1},{x:1.0,y:1},{x:1.3,y:1},
-    {x:1.6,y:0},{x:1.9,y:1},{x:2.2,y:1},{x:2.6,y:1},{x:3.0,y:1}
+(function () {
+  // ── Data ─────────────────────────────────────────────────
+  let data = [
+    { x: 1.0, y: 0 }, { x: 1.5, y: 0 }, { x: 2.0, y: 0 },
+    { x: 3.0, y: 0 }, { x: 3.5, y: 1 }, { x: 4.0, y: 1 },
+    { x: 5.0, y: 1 }, { x: 6.0, y: 1 }, { x: 2.5, y: 0 },
   ];
 
-  const width = 680, height = 280;
-  const pad = { l: 52, r: 24, t: 24, b: 40 };
-  const cw = width - pad.l - pad.r;
-  const ch = height - pad.t - pad.b;
-  const xMin = -4, xMax = 4;
-  const cx = v => pad.l + (v - xMin) / (xMax - xMin) * cw;
-  const cy = v => pad.t + (1 - v) * ch;
+  // ── Model ─────────────────────────────────────────────────
+  let modelW = 0, modelB = 0, modelFitted = false;
+  const sigmoid = z => 1 / (1 + Math.exp(-z));
 
-  const svg = d3.select("#lr-container").append("svg")
-    .attr("width", width).attr("height", height)
-    .style("font-family", "IBM Plex Sans, sans-serif")
-    .style("font-size", "11px");
+  function fitModel() {
+    const hasPos = data.some(d => d.y === 1);
+    const hasNeg = data.some(d => d.y === 0);
+    if (data.length < 3 || !hasPos || !hasNeg) { modelFitted = false; return; }
 
-  const gridG   = svg.append("g");
-  const curveG  = svg.append("g");
-  const boundG  = svg.append("g");
-  const ptsG    = svg.append("g");
+    // Normalize x to [0,1] range for stable GD
+    const xs = data.map(d => d.x);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs);
+    const xRange = xMax - xMin || 1;
+    const norm = x => (x - xMin) / xRange;
 
-  const gc = "#e5e5e0";
-  [-4,-3,-2,-1,0,1,2,3,4].forEach(v =>
-    gridG.append("line").attr("x1",cx(v)).attr("y1",pad.t).attr("x2",cx(v)).attr("y2",pad.t+ch).attr("stroke",gc).attr("stroke-width",0.5));
-  [0,0.25,0.5,0.75,1].forEach(v =>
-    gridG.append("line").attr("x1",pad.l).attr("y1",cy(v)).attr("x2",pad.l+cw).attr("y2",cy(v)).attr("stroke",gc).attr("stroke-width",0.5));
-  gridG.append("line").attr("x1",pad.l).attr("y1",cy(0.5)).attr("x2",pad.l+cw).attr("y2",cy(0.5)).attr("stroke","#bbb").attr("stroke-width",1).attr("stroke-dasharray","5,4");
+    let w = 0, b = 0;
+    const lr = 0.5, iters = 3000;
+    for (let i = 0; i < iters; i++) {
+      let dw = 0, db = 0;
+      data.forEach(d => {
+        const p = sigmoid(w * norm(d.x) + b);
+        const err = p - d.y;
+        dw += err * norm(d.x);
+        db += err;
+      });
+      w -= lr * dw / data.length;
+      b -= lr * db / data.length;
+    }
+    // Convert back to original x scale
+    modelW = w / xRange;
+    modelB  = b - w * xMin / xRange;
+    modelFitted = true;
+  }
 
-  svg.append("line").attr("x1",pad.l).attr("y1",pad.t).attr("x2",pad.l).attr("y2",pad.t+ch).attr("stroke","#999").attr("stroke-width",1);
-  svg.append("line").attr("x1",pad.l).attr("y1",pad.t+ch).attr("x2",pad.l+cw).attr("y2",pad.t+ch).attr("stroke","#999").attr("stroke-width",1);
-  [-3,-2,-1,0,1,2,3].forEach(v =>
-    svg.append("text").attr("x",cx(v)).attr("y",pad.t+ch+16).attr("text-anchor","middle").attr("fill","#666").text(v));
-  [0,0.5,1].forEach(v =>
-    svg.append("text").attr("x",pad.l-6).attr("y",cy(v)+4).attr("text-anchor","end").attr("fill","#666").text(v));
+  function predict(x) {
+    return sigmoid(modelW * x + modelB);
+  }
 
-  function draw() {
-    const w1 = +document.getElementById("lr-w1").value;
-    const w0 = +document.getElementById("lr-w0").value;
-    document.getElementById("lr-w1-val").textContent = w1.toFixed(1);
-    document.getElementById("lr-w0-val").textContent = w0.toFixed(1);
+  // ── Chart ─────────────────────────────────────────────────
+  const PAD = { l: 52, r: 20, t: 8, b: 46 };
+  const X_MIN = 0, X_MAX = 12;
 
-    curveG.selectAll("*").remove();
-    const cp = d3.range(201).map(i => {
-      const xv = xMin + (xMax - xMin) * i / 200;
-      return [cx(xv), cy(sigmoid(w1 * xv + w0))];
+  const svgEl = document.getElementById('chartSvg');
+
+  function buildSVG() {
+    svgEl.innerHTML = '';
+
+    const rect = svgEl.getBoundingClientRect();
+    const SVG_W = rect.width  || 580;
+    const SVG_H = rect.height || 280;
+    svgEl.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+
+    const CW = SVG_W - PAD.l - PAD.r;
+    const CH = SVG_H - PAD.t - PAD.b;
+    const cx = v => PAD.l + (v - X_MIN) / (X_MAX - X_MIN) * CW;
+    const cy = v => PAD.t + (1 - v) * CH;
+
+    const ns = 'http://www.w3.org/2000/svg';
+    function el(tag, attrs) {
+      const e = document.createElementNS(ns, tag);
+      Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+      return e;
+    }
+    function text(x, y, str, attrs = {}) {
+      const t = el('text', { x, y, ...attrs });
+      t.textContent = str;
+      return t;
+    }
+
+    // Background
+    svgEl.appendChild(el('rect', { x: PAD.l, y: PAD.t, width: CW, height: CH, fill: '#fafaf8', rx: 4 }));
+
+    // Grid lines
+    [0, 2, 4, 6, 8, 10, 12].forEach(v => {
+      svgEl.appendChild(el('line', { x1: cx(v), y1: PAD.t, x2: cx(v), y2: PAD.t + CH, stroke: '#e8e5de', 'stroke-width': 0.5 }));
+      svgEl.appendChild(text(cx(v), PAD.t + CH + 16, v, { 'text-anchor': 'middle', fill: '#999', 'font-size': 13, 'font-family': 'IBM Plex Mono' }));
     });
-    curveG.append("path").attr("d", d3.line()(cp))
-      .attr("fill","none").attr("stroke","#534AB7").attr("stroke-width",2.5).attr("stroke-linecap","round");
+    [0, 0.25, 0.5, 0.75, 1].forEach(v => {
+      svgEl.appendChild(el('line', { x1: PAD.l, y1: cy(v), x2: PAD.l + CW, y2: cy(v), stroke: '#e8e5de', 'stroke-width': v === 0.5 ? 1 : 0.5, 'stroke-dasharray': v === 0.5 ? '4,3' : 'none' }));
+      svgEl.appendChild(text(PAD.l - 6, cy(v) + 4, (v * 100).toFixed(0) + '%', { 'text-anchor': 'end', fill: '#999', 'font-size': 13, 'font-family': 'IBM Plex Mono' }));
+    });
 
-    boundG.selectAll("*").remove();
-    if (Math.abs(w1) > 0.05) {
-      const xb = -w0 / w1;
-      if (xb > xMin && xb < xMax) {
-        boundG.append("line").attr("x1",cx(xb)).attr("y1",pad.t).attr("x2",cx(xb)).attr("y2",pad.t+ch)
-          .attr("stroke","#D85A30").attr("stroke-width",1.5).attr("stroke-dasharray","5,3");
-        boundG.append("text").attr("x",cx(xb)+4).attr("y",pad.t+14).attr("fill","#993C1D").attr("font-size",10).text("boundary");
+    // 50% label
+    svgEl.appendChild(text(PAD.l + CW - 4, cy(0.5) - 4, '50% threshold', { 'text-anchor': 'end', fill: '#888', 'font-size': 14, 'font-family': 'IBM Plex Mono' }));
+
+    // Axes
+    svgEl.appendChild(el('line', { x1: PAD.l, y1: PAD.t, x2: PAD.l, y2: PAD.t + CH, stroke: '#ccc', 'stroke-width': 1 }));
+    svgEl.appendChild(el('line', { x1: PAD.l, y1: PAD.t + CH, x2: PAD.l + CW, y2: PAD.t + CH, stroke: '#ccc', 'stroke-width': 1 }));
+
+    // Axis labels
+    svgEl.appendChild(text(PAD.l + CW / 2, PAD.t + CH + 34, 'Study Hours', { 'text-anchor': 'middle', fill: '#888', 'font-size': 14, 'font-family': 'IBM Plex Sans' }));
+    const yLbl = document.createElementNS(ns, 'text');
+    yLbl.setAttribute('transform', `rotate(-90)`);
+    yLbl.setAttribute('x', -(PAD.t + CH / 2));
+    yLbl.setAttribute('y', 13);
+    yLbl.setAttribute('text-anchor', 'middle');
+    yLbl.setAttribute('fill', '#888');
+    yLbl.setAttribute('font-size', '11');
+    yLbl.setAttribute('font-family', 'IBM Plex Sans');
+    yLbl.textContent = 'P(Pass)';
+    svgEl.appendChild(yLbl);
+
+    // Pass / Fail zone labels
+    svgEl.appendChild(text(PAD.l + 6, PAD.t + 20, '  Pass zone', { fill: '#1D9E75', 'font-size': 14, 'font-family': 'IBM Plex Sans', opacity: 0.6 }));
+    svgEl.appendChild(text(PAD.l + 6, PAD.t + CH - 6, '  Fail zone', { fill: '#e53e3e', 'font-size': 14, 'font-family': 'IBM Plex Sans', opacity: 0.6 }));
+
+    // Sigmoid curve
+    if (modelFitted) {
+      const steps = 200;
+      const pts = [];
+      for (let i = 0; i <= steps; i++) {
+        const xv = X_MIN + (X_MAX - X_MIN) * i / steps;
+        pts.push(`${cx(xv)},${cy(predict(xv))}`);
+      }
+      const path = el('path', {
+        d: 'M' + pts.join('L'),
+        fill: 'none', stroke: '#6366f1', 'stroke-width': 2.5, 'stroke-linecap': 'round'
+      });
+      svgEl.appendChild(path);
+
+      // Decision boundary (x where p=0.5, i.e. w*x+b=0)
+      if (Math.abs(modelW) > 0.001) {
+        const xb = -modelB / modelW;
+        if (xb > X_MIN && xb < X_MAX) {
+          svgEl.appendChild(el('line', { x1: cx(xb), y1: PAD.t, x2: cx(xb), y2: PAD.t + CH, stroke: '#f59e0b', 'stroke-width': 1.5, 'stroke-dasharray': '5,3' }));
+          svgEl.appendChild(text(cx(xb) + 4, PAD.t + 18, `~${xb.toFixed(1)}h boundary`, { fill: '#b45309', 'font-size': 12, 'font-family': 'IBM Plex Mono' }));
+        }
       }
     }
 
-    ptsG.selectAll("*").remove();
-    pts.forEach(p => {
-      const py2 = cy(p.y === 1 ? 0.96 : 0.04);
-      const pred = sigmoid(w1 * p.x + w0) >= 0.5 ? 1 : 0;
-      const correct = pred === p.y;
-      const color = p.y === 1 ? "#534AB7" : "#D85A30";
-      ptsG.append("circle").attr("cx", cx(p.x)).attr("cy", py2).attr("r", 5)
-        .attr("fill", correct ? color : color + "4d")
-        .attr("stroke", color).attr("stroke-width", 1.5);
+    // Data points
+    data.forEach(d => {
+      const jitter = (Math.random() - 0.5) * 0.06; // small y jitter so overlapping points are visible
+      const yPos = cy(d.y === 1 ? 0.97 : 0.03) + jitter * CH;
+      const color = d.y === 1 ? '#1D9E75' : '#e53e3e';
+      const circle = el('circle', { cx: cx(d.x), cy: yPos, r: 6, fill: color, stroke: 'white', 'stroke-width': 1.5, opacity: 0.85 });
+      svgEl.appendChild(circle);
     });
   }
 
-  document.getElementById("lr-w1").addEventListener("input", draw);
-  document.getElementById("lr-w0").addEventListener("input", draw);
-  draw();
+  // ── Inference UI ──────────────────────────────────────────
+  let inferHours = 5;
+
+  function renderInference() {
+    const body = document.getElementById('inferenceBody');
+    if (!modelFitted) {
+      body.innerHTML = `<div class="not-enough" style="grid-column:1/-1;">Add data and fit the model first to use predictions.</div>`;
+      return;
+    }
+
+    const prob = predict(inferHours);
+    const pct  = (prob * 100).toFixed(0);
+    const color = prob >= 0.75 ? 'var(--yes)' : prob >= 0.4 ? '#f59e0b' : 'var(--no)';
+    const verdict = prob >= 0.75 ? '  Likely to Pass' : prob >= 0.5 ? '🤔 Probably Pass' : prob >= 0.25 ? '😬 Probably Fail — a bit risky' : '  Likely to Fail';
+
+    // Explain in plain language
+    const xs = data.map(d => d.x);
+    const boundary = Math.abs(modelW) > 0.001 ? (-modelB / modelW).toFixed(1) : null;
+    let explain = '';
+    if (boundary) {
+      explain = prob >= 0.5
+        ? `Based on your data, the model thinks students usually need around <strong>${boundary} hours</strong> to have a 50/50 shot. At <strong>${inferHours} hours</strong>, you're ${inferHours > +boundary ? 'above' : 'below'} that mark — so the model gives you a <strong>${pct}% chance</strong> of passing.`
+        : `The model estimates the tipping point is around <strong>${boundary} hours</strong>. At <strong>${inferHours} hours</strong>, you haven't crossed that yet — giving you only a <strong>${pct}%</strong> chance of passing based on the patterns in the data.`;
+    } else {
+      explain = `At <strong>${inferHours} hours</strong> of studying, the model predicts a <strong>${pct}% probability</strong> of passing.`;
+    }
+
+    body.innerHTML = `
+      <div class="inf-left">
+        <label>How many hours are you planning to study?</label>
+        <div class="inf-slider-row">
+          <input type="range" class="inf-slider" id="inferSlider" min="0" max="12" step="0.5" value="${inferHours}">
+          <span class="inf-val" id="inferValDisplay">${inferHours}</span>
+        </div>
+        <div class="inf-unit">hours of studying</div>
+        <div class="inf-explain" id="inferExplain">${explain}</div>
+      </div>
+      <div class="inf-result">
+        <div class="inf-prob-big" id="inferProb" style="color:${color};">${pct}%</div>
+        <div class="inf-verdict" id="inferVerdict" style="color:${color};">${verdict}</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.4rem;">chance of passing</div>
+        <div class="prob-bar-track">
+          <div class="prob-bar-fill" id="inferBar" style="width:${pct}%;background:${color};"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);">
+          <span>0%</span><span>50%</span><span>100%</span>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('inferSlider').addEventListener('input', e => {
+      inferHours = parseFloat(e.target.value);
+      document.getElementById('inferValDisplay').textContent = inferHours;
+      updateInferenceValues();
+    });
+  }
+
+  function updateInferenceValues() {
+    if (!modelFitted) return;
+    const prob = predict(inferHours);
+    const pct  = (prob * 100).toFixed(0);
+    const color = prob >= 0.75 ? 'var(--yes)' : prob >= 0.4 ? '#f59e0b' : 'var(--no)';
+    const verdict = prob >= 0.75 ? '  Likely to Pass' : prob >= 0.5 ? '🤔 Probably Pass — but close' : prob >= 0.25 ? '😬 Probably Fail — a bit risky' : '  Likely to Fail';
+    const boundary = Math.abs(modelW) > 0.001 ? (-modelB / modelW).toFixed(1) : null;
+    let explain = '';
+    if (boundary) {
+      explain = prob >= 0.5
+        ? `Based on your data, the model thinks students usually need around <strong>${boundary} hours</strong> to have a 50/50 shot. At <strong>${inferHours} hours</strong>, you're ${inferHours > +boundary ? 'above' : 'below'} that mark — so the model gives you a <strong>${pct}% chance</strong> of passing.`
+        : `The model estimates the tipping point is around <strong>${boundary} hours</strong>. At <strong>${inferHours} hours</strong>, you haven't crossed that yet — giving you only a <strong>${pct}%</strong> chance of passing based on the patterns in the data.`;
+    } else {
+      explain = `At <strong>${inferHours} hours</strong> of studying, the model predicts a <strong>${pct}% probability</strong> of passing.`;
+    }
+
+    document.getElementById('inferProb').textContent = pct + '%';
+    document.getElementById('inferProb').style.color = color;
+    document.getElementById('inferVerdict').textContent = verdict;
+    document.getElementById('inferVerdict').style.color = color;
+    document.getElementById('inferBar').style.width = pct + '%';
+    document.getElementById('inferBar').style.background = color;
+    document.getElementById('inferExplain').innerHTML = explain;
+  }
+
+  // ── Render data list ──────────────────────────────────────
+  function renderDataList() {
+    const list = document.getElementById('dataList');
+    const empty = document.getElementById('dataEmpty');
+    const summary = document.getElementById('dataSummary');
+
+    if (data.length === 0) {
+      list.innerHTML = '<div class="data-empty" id="dataEmpty">No data yet. Add some above!</div>';
+      summary.style.display = 'none';
+      return;
+    }
+
+    const passCount = data.filter(d => d.y === 1).length;
+    const failCount = data.filter(d => d.y === 0).length;
+    summary.style.display = 'flex';
+    summary.innerHTML = `
+      <span class="ds-badge yes">  ${passCount} passed</span>
+      <span class="ds-badge no">  ${failCount} failed</span>
+    `;
+
+    list.innerHTML = data.map((d, i) => `
+      <div class="data-item ${d.y === 1 ? 'yes' : 'no'}">
+        <span>${d.y === 1 ? ' ' : ' '} <strong>${d.x}h</strong> studied</span>
+        <span class="di-label ${d.y === 1 ? 'yes' : 'no'}">${d.y === 1 ? 'Passed' : 'Failed'}</span>
+        <button class="di-del" data-i="${i}" title="Remove">✕</button>
+      </div>
+    `).join('');
+
+    list.querySelectorAll('.di-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        data.splice(+btn.dataset.i, 1);
+        refresh();
+      });
+    });
+  }
+
+  // ── Chart message ─────────────────────────────────────────
+  function updateChartMsg() {
+    const msg = document.getElementById('chartMsg');
+    const hasPos = data.some(d => d.y === 1);
+    const hasNeg = data.some(d => d.y === 0);
+    if (data.length < 3 || !hasPos || !hasNeg) {
+      msg.style.display = 'block';
+      msg.textContent = data.length === 0
+        ? 'Add data points to see the chart.'
+        : !hasPos ? 'Add at least one   Passed point to fit the curve.'
+        : !hasNeg ? 'Add at least one   Failed point to fit the curve.'
+        : 'Add at least 3 data points to fit the curve.';
+    } else {
+      msg.style.display = 'none';
+    }
+  }
+
+  // ── Full refresh ──────────────────────────────────────────
+  function refresh() {
+    fitModel();
+    buildSVG();
+    updateChartMsg();
+    renderDataList();
+    renderInference();
+  }
+
+  // ── Add data ──────────────────────────────────────────────
+  function addPoint(y) {
+    const raw = document.getElementById('hoursInput').value;
+    const val = parseFloat(raw);
+    if (isNaN(val) || val < 0 || val > 12) {
+      document.getElementById('hoursInput').style.borderColor = '#e53e3e';
+      setTimeout(() => document.getElementById('hoursInput').style.borderColor = '', 1000);
+      return;
+    }
+    data.push({ x: val, y });
+    document.getElementById('hoursInput').value = '';
+    document.getElementById('hoursInput').focus();
+    refresh();
+  }
+
+  document.getElementById('btnYes').addEventListener('click', () => addPoint(1));
+  document.getElementById('btnNo' ).addEventListener('click', () => addPoint(0));
+  document.getElementById('hoursInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addPoint(1);
+  });
+
+  // Init
+  refresh();
+
+  // Redraw chart when the SVG container is resized
+  new ResizeObserver(() => { buildSVG(); }).observe(svgEl);
 })();
 </script>
 </body>
