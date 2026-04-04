@@ -4,124 +4,402 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>06 — Activation Functions</title>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #f7f6f2; --card: #fff; --border: #e2dfd6;
     --text: #1a1917; --muted: #6b6860;
-    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
   }
-  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 32px 24px; min-height: 100vh; }
+
   .back { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; }
   .back:hover { color: var(--text); }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 780px; }
-  .card-header { padding: 18px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
-  .card-idx { font-family: var(--mono); font-size: 10px; color: var(--muted); }
-  .card-title { font-size: 14px; font-weight: 600; flex: 1; }
-  .card-tag { font-family: var(--mono); font-size: 10px; background: #eef2e8; color: #1D6F4A; padding: 2px 8px; border-radius: 3px; }
-  .card-body { padding: 24px; overflow-x: auto; }
-  .ctrl-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
-  .ctrl-label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-  .btn { font-size: 11px; padding: 5px 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; cursor: pointer; color: #333; transition: background 0.1s; }
-  .btn:hover { background: #f0ede6; }
-  .btn.active { background: #e1f5ee; border-color: #1D9E75; color: #0f6e56; font-weight: 500; }
+
+  h1 { font-size: 1.45rem; font-weight: 700; margin-bottom: 0.35rem; }
+  .subtitle { color: var(--muted); font-size: 0.92rem; max-width: 760px; line-height: 1.65; margin-bottom: 1.75rem; }
+
+  .explainer {
+    background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b;
+    border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 2rem;
+    font-size: 0.88rem; line-height: 1.7; color: #78350f; max-width: 960px;
+  }
+  .explainer strong { color: #92400e; }
+
+  /* ── Tab strip ── */
+  .tab-strip {
+    display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; max-width: 960px;
+  }
+  .tab-btn {
+    padding: 0.5rem 1.1rem; border-radius: 8px; border: 1.5px solid var(--border);
+    background: var(--card); font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    color: var(--muted); transition: all 0.15s;
+  }
+  .tab-btn:hover { border-color: #a0aec0; color: var(--text); }
+  .tab-btn.active { border-color: currentColor; background: #f0f9f6; }
+
+  /* tab accent colors */
+  .tab-btn[data-fn="relu"].active    { color: #c04e2c; background: #fff5f2; border-color: #c04e2c; }
+  .tab-btn[data-fn="sigmoid"].active { color: #534ab7; background: #f4f3ff; border-color: #534ab7; }
+  .tab-btn[data-fn="tanh"].active    { color: #1d6f4a; background: #f0fdf4; border-color: #1d6f4a; }
+  .tab-btn[data-fn="leaky"].active   { color: #8b4513; background: #fdf5f0; border-color: #8b4513; }
+  .tab-btn[data-fn="all"].active     { color: #374151; background: #f9fafb; border-color: #374151; }
+
+  /* ── Main layout ── */
+  .layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.25rem; max-width: 960px; }
+  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+  }
+
+  canvas { display: block; width: 100%; height: auto; }
+
+  /* ── Info panel ── */
+  .fn-title {
+    font-size: 1.05rem; font-weight: 700; margin-bottom: 0.25rem;
+  }
+  .fn-formula {
+    font-family: var(--mono); font-size: 0.85rem; color: var(--muted);
+    background: #f3f4f6; padding: 0.3rem 0.65rem; border-radius: 6px;
+    display: inline-block; margin-bottom: 1rem;
+  }
+  .fn-desc {
+    font-size: 0.88rem; line-height: 1.7; color: var(--muted); margin-bottom: 1.25rem;
+  }
+
+  /* ── Slider playground ── */
+  .playground {
+    background: #f9f8f5; border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem; margin-bottom: 1.25rem;
+  }
+  .playground-title {
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); margin-bottom: 0.75rem;
+  }
+  .slider-row {
+    display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem;
+  }
+  .slider-row label { font-size: 0.82rem; color: var(--muted); width: 46px; flex-shrink: 0; }
+  .slider-row input[type=range] { flex: 1; accent-color: #4f46e5; }
+  .slider-val {
+    font-family: var(--mono); font-size: 0.82rem; color: var(--text);
+    width: 44px; text-align: right; flex-shrink: 0;
+  }
+
+  .output-row {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.65rem 0.9rem; margin-top: 0.25rem;
+  }
+  .output-label { font-size: 0.82rem; color: var(--muted); }
+  .output-val { font-family: var(--mono); font-size: 1rem; font-weight: 700; }
+
+  .output-bar-wrap { margin-top: 0.6rem; background: #e5e7eb; border-radius: 999px; height: 8px; overflow: hidden; }
+  .output-bar { height: 100%; border-radius: 999px; transition: width 0.1s, background 0.1s; }
+
+  /* ── Nuggets (key traits) ── */
+  .nuggets { display: flex; flex-direction: column; gap: 0.5rem; }
+  .nugget {
+    display: flex; gap: 0.6rem; align-items: flex-start;
+    font-size: 0.83rem; line-height: 1.55; color: var(--text);
+  }
+  .nugget-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── All-at-once compare view ── */
+  .compare-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 960px;
+  }
+  @media (max-width: 600px) { .compare-grid { grid-template-columns: 1fr; } }
+  .compare-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1rem 1.2rem;
+  }
+  .compare-card h3 { font-size: 0.92rem; font-weight: 700; margin-bottom: 0.2rem; }
+  .compare-card .cf { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); margin-bottom: 0.6rem; }
+  .compare-card canvas { border-radius: 6px; }
+
+  .hidden { display: none; }
 </style>
 </head>
 <body>
+
 <a class="back" href="index.html">← Back to all visualizations</a>
-<div class="card">
-  <div class="card-header">
-    <span class="card-idx">06</span>
-    <span class="card-title">Activation Functions — ReLU, Sigmoid, Tanh, Leaky ReLU</span>
-    <span class="card-tag">Module 9A</span>
+
+<h1>Activation Functions</h1>
+<p class="subtitle">A neural network neuron does two things: multiply inputs by weights, then run the result through an <strong>activation function</strong>. That function decides whether the neuron "fires" — and how loud. Pick one below to explore it.</p>
+
+<div class="explainer">
+  <strong>Why do we need activation functions at all?</strong> Without them, stacking layers is just multiplying matrices — the whole network collapses into a single linear equation. Activation functions add <em>non-linearity</em>, which is what lets neural networks learn complex patterns like faces, speech, or handwriting.
+</div>
+
+<!-- Tab strip -->
+<div class="tab-strip">
+  <button class="tab-btn active" data-fn="relu">ReLU</button>
+  <button class="tab-btn" data-fn="sigmoid">Sigmoid</button>
+  <button class="tab-btn" data-fn="tanh">Tanh</button>
+  <button class="tab-btn" data-fn="leaky">Leaky ReLU</button>
+  <button class="tab-btn" data-fn="all">Compare all</button>
+</div>
+
+<!-- Individual views (relu/sigmoid/tanh/leaky) -->
+<div id="single-view" class="layout">
+  <div class="panel">
+    <canvas id="fn-canvas" width="520" height="300"></canvas>
   </div>
-  <div class="card-body">
-    <div class="ctrl-row">
-      <span class="ctrl-label">Toggle:</span>
-      <button class="btn active" id="af-relu">ReLU</button>
-      <button class="btn active" id="af-sigmoid">Sigmoid</button>
-      <button class="btn active" id="af-tanh">Tanh</button>
-      <button class="btn active" id="af-leaky">Leaky ReLU</button>
+  <div class="panel">
+    <div class="fn-title" id="fn-name"></div>
+    <div class="fn-formula" id="fn-formula"></div>
+    <p class="fn-desc" id="fn-desc"></p>
+
+    <div class="playground">
+      <div class="playground-title">Try it — plug in a number</div>
+      <div class="slider-row">
+        <label>Input z</label>
+        <input type="range" id="z-slider" min="-5" max="5" step="0.1" value="1">
+        <span class="slider-val" id="z-display">1.0</span>
+      </div>
+      <div class="output-row">
+        <span class="output-label">Output f(z)</span>
+        <span class="output-val" id="fn-output">—</span>
+      </div>
+      <div class="output-bar-wrap">
+        <div class="output-bar" id="output-bar"></div>
+      </div>
     </div>
-    <div id="af-container"></div>
+
+    <div class="nuggets" id="fn-nuggets"></div>
+  </div>
+</div>
+
+<!-- Compare-all view -->
+<div id="all-view" class="hidden">
+  <div class="compare-grid">
+    <div class="compare-card" data-fn="relu">
+      <h3 style="color:#c04e2c">ReLU</h3>
+      <div class="cf">max(0, z)</div>
+      <canvas width="360" height="190"></canvas>
+    </div>
+    <div class="compare-card" data-fn="sigmoid">
+      <h3 style="color:#534ab7">Sigmoid</h3>
+      <div class="cf">1 / (1 + e⁻ᶻ)</div>
+      <canvas width="360" height="190"></canvas>
+    </div>
+    <div class="compare-card" data-fn="tanh">
+      <h3 style="color:#1d6f4a">Tanh</h3>
+      <div class="cf">tanh(z)</div>
+      <canvas width="360" height="190"></canvas>
+    </div>
+    <div class="compare-card" data-fn="leaky">
+      <h3 style="color:#8b4513">Leaky ReLU</h3>
+      <div class="cf">max(0.01z, z)</div>
+      <canvas width="360" height="190"></canvas>
+    </div>
   </div>
 </div>
 
 <script>
-(function() {
-  const FNS = {
-    relu:    { fn: z => Math.max(0, z),          color: "#C04E2C", label: "ReLU",       formula: "max(0, z)" },
-    sigmoid: { fn: z => 1/(1+Math.exp(-z)),       color: "#534AB7", label: "Sigmoid",    formula: "1/(1+e⁻ᶻ)" },
-    tanh:    { fn: z => Math.tanh(z),             color: "#1D6F4A", label: "Tanh",       formula: "tanh(z)" },
-    leaky:   { fn: z => z >= 0 ? z : 0.01 * z,  color: "#8B4513", label: "Leaky ReLU", formula: "max(0.01z, z)" }
-  };
-  const active = new Set(Object.keys(FNS));
-
-  const W = 680, H = 300;
-  const pad = { l: 52, r: 24, t: 24, b: 40 };
-  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
-  const xMin = -5, xMax = 5, yMin = -1.5, yMax = 1.5;
-  const cx = v => pad.l + (v - xMin) / (xMax - xMin) * cw;
-  const cy = v => pad.t + (1 - (v - yMin) / (yMax - yMin)) * ch;
-
-  const svg = d3.select("#af-container").append("svg")
-    .attr("width", W).attr("height", H)
-    .style("font-family", "IBM Plex Sans, sans-serif")
-    .style("font-size", "11px");
-
-  // Static grid
-  const gc = "#e5e5e0";
-  [-4,-3,-2,-1,0,1,2,3,4].forEach(v =>
-    svg.append("line").attr("x1",cx(v)).attr("y1",pad.t).attr("x2",cx(v)).attr("y2",pad.t+ch).attr("stroke",gc).attr("stroke-width",0.5));
-  [-1,-0.5,0,0.5,1].forEach(v =>
-    svg.append("line").attr("x1",pad.l).attr("y1",cy(v)).attr("x2",pad.l+cw).attr("y2",cy(v)).attr("stroke",gc).attr("stroke-width",0.5));
-
-  // Axes
-  svg.append("line").attr("x1",cx(0)).attr("y1",pad.t).attr("x2",cx(0)).attr("y2",pad.t+ch).attr("stroke","#bbb").attr("stroke-width",1);
-  svg.append("line").attr("x1",pad.l).attr("y1",cy(0)).attr("x2",pad.l+cw).attr("y2",cy(0)).attr("stroke","#bbb").attr("stroke-width",1);
-
-  // Tick labels
-  [-4,-2,0,2,4].forEach(v =>
-    svg.append("text").attr("x",cx(v)).attr("y",pad.t+ch+16).attr("text-anchor","middle").attr("fill","#888").text(v));
-  [-1,0,1].forEach(v =>
-    svg.append("text").attr("x",pad.l-6).attr("y",cy(v)+4).attr("text-anchor","end").attr("fill","#888").text(v));
-
-  const curvesG = svg.append("g");
-  const legendG = svg.append("g");
-
-  function draw() {
-    curvesG.selectAll("*").remove();
-    legendG.selectAll("*").remove();
-    let li = 0;
-    Object.entries(FNS).forEach(([key, { fn, color, label, formula }]) => {
-      if (!active.has(key)) return;
-      const pts = d3.range(201).map(i => {
-        const xv = xMin + (xMax - xMin) * i / 200;
-        return [cx(xv), cy(fn(xv))];
-      });
-      curvesG.append("path")
-        .attr("d", d3.line()(pts))
-        .attr("fill","none").attr("stroke",color).attr("stroke-width",2.5).attr("stroke-linecap","round");
-
-      const lx = pad.l + 10 + li * 165, ly = pad.t + 16;
-      legendG.append("line").attr("x1",lx).attr("y1",ly).attr("x2",lx+18).attr("y2",ly).attr("stroke",color).attr("stroke-width",2);
-      legendG.append("text").attr("x",lx+22).attr("y",ly+4).attr("font-size",10).attr("fill","#333").text(`${label}: ${formula}`);
-      li++;
-    });
+// ── Function definitions ──────────────────────────────────────────────────────
+const FNS = {
+  relu: {
+    label: "ReLU",
+    formula: "f(z) = max(0, z)",
+    color: "#c04e2c",
+    fn: z => Math.max(0, z),
+    range: [-1.5, 1.5],
+    desc: "ReLU stands for Rectified Linear Unit — a fancy name for something dead simple: if the input is negative, output 0. If it's positive, pass it through unchanged. It's like a gate that only lets positive signals through.",
+    nuggets: [
+      { icon: "⚡", text: "<strong>Super fast to compute.</strong> No exponents or complex math — just check if the number is positive." },
+      { icon: "💀", text: "<strong>Dead neuron problem.</strong> If a neuron gets stuck outputting 0, its gradient also becomes 0. The neuron stops learning forever — it \"dies\"." },
+      { icon: "🏆", text: "<strong>Most popular in deep networks.</strong> Despite its simplicity, it works really well in practice for hidden layers." },
+    ]
+  },
+  sigmoid: {
+    label: "Sigmoid",
+    formula: "f(z) = 1 / (1 + e⁻ᶻ)",
+    color: "#534ab7",
+    fn: z => 1 / (1 + Math.exp(-z)),
+    range: [0, 1],
+    desc: "Sigmoid squishes any number — no matter how huge or tiny — into the range 0 to 1. That makes it great for probabilities: \"what's the chance this email is spam?\" The output is always a smooth S-curve.",
+    nuggets: [
+      { icon: "📊", text: "<strong>Output means probability.</strong> 0.9 = 90% confident. That's why it's used in the final layer for binary classification (yes/no decisions)." },
+      { icon: "🐌", text: "<strong>Vanishing gradient.</strong> Far from zero, the curve is almost flat — gradients nearly disappear, which slows down learning in deep networks." },
+      { icon: "🎯", text: "<strong>Classic for output layers.</strong> When you need a probability out of your network, sigmoid is the go-to." },
+    ]
+  },
+  tanh: {
+    label: "Tanh",
+    formula: "f(z) = tanh(z)",
+    color: "#1d6f4a",
+    fn: z => Math.tanh(z),
+    range: [-1, 1],
+    desc: "Tanh is like Sigmoid's older sibling — it also makes an S-curve, but centered at 0 with range −1 to +1 instead of 0 to 1. Centering at zero turns out to matter: it helps the next layer's learning go a bit faster.",
+    nuggets: [
+      { icon: "⚖️", text: "<strong>Zero-centered.</strong> Outputs range from −1 to +1, so the average output is near 0. This makes gradient updates more balanced — less zigzag during training." },
+      { icon: "🐌", text: "<strong>Still has vanishing gradients.</strong> Same issue as Sigmoid — for very large or small inputs, the curve flattens out." },
+      { icon: "📡", text: "<strong>Popular in RNNs.</strong> Recurrent neural networks (used for sequences and text) often use Tanh." },
+    ]
+  },
+  leaky: {
+    label: "Leaky ReLU",
+    formula: "f(z) = max(0.01z, z)",
+    color: "#8b4513",
+    fn: z => z >= 0 ? z : 0.01 * z,
+    range: [-1.5, 1.5],
+    desc: "Leaky ReLU is ReLU with a tiny fix: instead of hard-zeroing negative inputs, it lets a small fraction (1%) leak through. That tiny slope is enough to keep the gradient alive, preventing dead neurons.",
+    nuggets: [
+      { icon: "🔧", text: "<strong>Fixes dead neurons.</strong> The 0.01 slope on the left means the gradient never hits exactly zero. Neurons can always recover and keep learning." },
+      { icon: "🎚️", text: "<strong>The slope is a choice.</strong> 0.01 is common, but some variants let the model learn the slope itself — that's called Parametric ReLU (PReLU)." },
+      { icon: "✅", text: "<strong>Good all-round choice.</strong> When ReLU causes dead neurons in your network, Leaky ReLU is often the first thing to try." },
+    ]
   }
+};
 
-  Object.keys(FNS).forEach(key => {
-    document.getElementById(`af-${key}`).addEventListener("click", function() {
-      if (active.has(key)) { active.delete(key); this.classList.remove("active"); }
-      else { active.add(key); this.classList.add("active"); }
-      draw();
-    });
+// ── Canvas drawing ────────────────────────────────────────────────────────────
+function drawFn(canvas, key, highlightZ) {
+  const { fn, color, range } = FNS[key];
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  const pad = { l: 48, r: 20, t: 20, b: 36 };
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  const xMin = -5, xMax = 5;
+  const yMin = range[0] - Math.abs(range[1] - range[0]) * 0.15;
+  const yMax = range[1] + Math.abs(range[1] - range[0]) * 0.15;
+
+  const px = v => pad.l + (v - xMin) / (xMax - xMin) * cw;
+  const py = v => pad.t + (1 - (v - yMin) / (yMax - yMin)) * ch;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = "#e5e5e0"; ctx.lineWidth = 0.5;
+  [-4,-3,-2,-1,0,1,2,3,4].forEach(v => {
+    ctx.beginPath(); ctx.moveTo(px(v), pad.t); ctx.lineTo(px(v), pad.t + ch); ctx.stroke();
   });
 
-  draw();
-})();
+  // Axes
+  ctx.strokeStyle = "#c4c0b8"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(px(0), pad.t); ctx.lineTo(px(0), pad.t + ch); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad.l, py(0)); ctx.lineTo(pad.l + cw, py(0)); ctx.stroke();
+
+  // Tick labels
+  ctx.fillStyle = "#9ca3af"; ctx.font = "10px IBM Plex Mono, monospace"; ctx.textAlign = "center";
+  [-4,-2,0,2,4].forEach(v => ctx.fillText(v, px(v), pad.t + ch + 16));
+  ctx.textAlign = "right";
+  [range[0], 0, range[1]].filter((v,i,a) => a.indexOf(v) === i).forEach(v => {
+    ctx.fillText(v.toFixed(1), pad.l - 6, py(v) + 4);
+  });
+
+  // Curve
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = "round";
+  ctx.beginPath();
+  for (let i = 0; i <= 300; i++) {
+    const xv = xMin + (xMax - xMin) * i / 300;
+    const yv = fn(xv);
+    i === 0 ? ctx.moveTo(px(xv), py(yv)) : ctx.lineTo(px(xv), py(yv));
+  }
+  ctx.stroke();
+
+  // Highlight dot
+  if (highlightZ !== undefined) {
+    const xv = highlightZ, yv = fn(xv);
+    // vertical dashed line
+    ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(px(xv), pad.t); ctx.lineTo(px(xv), py(yv)); ctx.stroke();
+    ctx.setLineDash([]);
+    // horizontal dashed line
+    ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(pad.l, py(yv)); ctx.lineTo(px(xv), py(yv)); ctx.stroke();
+    ctx.setLineDash([]);
+    // dot
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(px(xv), py(yv), 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(px(xv), py(yv), 3, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentFn = "relu";
+let currentZ = 1.0;
+
+// ── Single view render ────────────────────────────────────────────────────────
+function renderSingle() {
+  const def = FNS[currentFn];
+  const canvas = document.getElementById("fn-canvas");
+
+  document.getElementById("fn-name").textContent = def.label;
+  document.getElementById("fn-formula").textContent = def.formula;
+  document.getElementById("fn-desc").textContent = def.desc;
+
+  // Nuggets
+  const nugsEl = document.getElementById("fn-nuggets");
+  nugsEl.innerHTML = def.nuggets.map(n =>
+    `<div class="nugget"><span class="nugget-icon">${n.icon}</span><span>${n.text}</span></div>`
+  ).join("");
+
+  drawFn(canvas, currentFn, currentZ);
+  updateOutput();
+}
+
+function updateOutput() {
+  const def = FNS[currentFn];
+  const out = def.fn(currentZ);
+  document.getElementById("fn-output").textContent = out.toFixed(4);
+  document.getElementById("fn-output").style.color = def.color;
+
+  // Bar: map output from [range[0], range[1]] to 0–100%
+  const [lo, hi] = def.range;
+  const pct = Math.max(0, Math.min(100, (out - lo) / (hi - lo) * 100));
+  const bar = document.getElementById("output-bar");
+  bar.style.width = pct + "%";
+  bar.style.background = def.color;
+
+  drawFn(document.getElementById("fn-canvas"), currentFn, currentZ);
+}
+
+// ── Compare view ──────────────────────────────────────────────────────────────
+function renderAll() {
+  document.querySelectorAll("#all-view .compare-card").forEach(card => {
+    const key = card.dataset.fn;
+    const canvas = card.querySelector("canvas");
+    drawFn(canvas, key);
+  });
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    const fn = btn.dataset.fn;
+    if (fn === "all") {
+      document.getElementById("single-view").classList.add("hidden");
+      document.getElementById("all-view").classList.remove("hidden");
+      renderAll();
+    } else {
+      document.getElementById("all-view").classList.add("hidden");
+      document.getElementById("single-view").classList.remove("hidden");
+      currentFn = fn;
+      renderSingle();
+    }
+  });
+});
+
+// ── Slider ────────────────────────────────────────────────────────────────────
+const slider = document.getElementById("z-slider");
+slider.addEventListener("input", () => {
+  currentZ = parseFloat(slider.value);
+  document.getElementById("z-display").textContent = currentZ.toFixed(1);
+  updateOutput();
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderSingle();
 </script>
 </body>
 </html>

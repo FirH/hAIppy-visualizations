@@ -298,7 +298,7 @@
   <!-- Right: verdict -->
   <div class="verdict-panel">
     <div>
-      <p class="panel-label">Spam-O-Meter</p>
+      <p class="panel-label">Spam Indicator</p>
       <div class="meter-wrap">
         <div class="meter-emoji" id="meter-emoji">🤔</div>
         <div class="meter-label" id="meter-label">Waiting for clues...</div>
@@ -317,7 +317,7 @@
     </div>
 
     <div>
-      <p class="panel-label">AI Verdict</p>
+      <p class="panel-label">Verdict</p>
       <div class="verdict-badge neutral" id="verdict-badge">Type your email above to get a verdict</div>
       <div class="verdict-caption" id="verdict-caption"></div>
     </div>
@@ -510,11 +510,11 @@
 
     const emojiEl = document.getElementById('meter-emoji');
     const labelEl = document.getElementById('meter-label');
-    if (ps >= 0.80)      { emojiEl.textContent = '🚨'; labelEl.textContent = 'Very likely SPAM!'; }
-    else if (ps >= 0.55) { emojiEl.textContent = '😬'; labelEl.textContent = 'Probably spam…'; }
-    else if (ps >= 0.40) { emojiEl.textContent = '🤔'; labelEl.textContent = 'Uncertain — could go either way'; }
-    else if (ps >= 0.20) { emojiEl.textContent = '🙂'; labelEl.textContent = 'Probably normal'; }
-    else                 { emojiEl.textContent = '✅'; labelEl.textContent = 'Looks safe!'; }
+    if (ps >= 0.80)      { emojiEl.textContent = '🚨'; labelEl.textContent = 'Spam'; }
+    else if (ps >= 0.55) { emojiEl.textContent = '😬'; labelEl.textContent = 'Leaning Towards Spam'; }
+    else if (ps >= 0.40) { emojiEl.textContent = '🤔'; labelEl.textContent = 'Neutral'; }
+    else if (ps >= 0.20) { emojiEl.textContent = '🙂'; labelEl.textContent = 'Leaning Towards Normal'; }
+    else                 { emojiEl.textContent = '✅'; labelEl.textContent = 'Normal'; }
 
     const badge     = document.getElementById('verdict-badge');
     const captionEl = document.getElementById('verdict-caption');
@@ -550,8 +550,8 @@
     function spammyPhrase(word, spamPct, hamPct, prevPct, nowPct) {
       const big = spamPct >= 70;
       const openings = big
-        ? [`Whoa — <strong>"${word}"</strong> is a massive red flag.`, `Uh oh. <strong>"${word}"</strong> is one of the most common spam words out there.`]
-        : [`Hmm, <strong>"${word}"</strong> is a bit suspicious.`, `<strong>"${word}"</strong> raises an eyebrow.`];
+        ? [`<strong>"${word}"</strong> is a strong indicator of spam.`, `<strong>"${word}"</strong> is one of the most common spam words in my data.`]
+        : [`<strong>"${word}"</strong> slightly indicates spam`, `<strong>"${word}"</strong> most likely indicates spam.`];
       const body = `Out of every 100 spam emails, ${spamPct} contain this word. There are only ${hamPct} normal emails out of 100 that use this word.`;
       const shift = `Suspicion goes from ${(prevPct*100).toFixed(0)}% up to <strong>${(nowPct*100).toFixed(0)}%</strong>.`;
       return openings[Math.floor(Math.random() * openings.length)] + ' ' + body + ' ' + shift;
@@ -560,19 +560,19 @@
     function safePhrase(word, spamPct, hamPct, prevPct, nowPct) {
       const strong = hamPct >= 55;
       const openings = strong
-        ? [`Good sign — <strong>"${word}"</strong> is something real people actually write.`, `<strong>"${word}"</strong>? That's very normal email language.`]
-        : [`<strong>"${word}"</strong> leans toward a normal email.`, `Seeing <strong>"${word}"</strong> makes this feel less suspicious.`];
-      const body = `Out of every 100 spam emails, only ${spamPct} use this word. There are ${hamPct} normal emails out of 100 that use this word`;
+        ? [`<strong>"${word}"</strong> is a strong indicator of a normal email.`, `<strong>"${word}"</strong> is one of the most common normal words in my data.`]
+        : [`<strong>"${word}"</strong> leans toward a normal email.`, `Seeing <strong>"${word}"</strong> most likely indicates a normal email.`];
+      const body = `Out of every 100 spam emails, only ${spamPct} use this word. There are ${hamPct} normal emails out of 100 that use this word.`;
       const shift = `Suspicion drops from ${(prevPct*100).toFixed(0)}% down to <strong>${(nowPct*100).toFixed(0)}%</strong>.`;
       return openings[Math.floor(Math.random() * openings.length)] + ' ' + body + ' ' + shift;
     }
 
     function neutralPhrase(word, spamPct, hamPct, prevPct, nowPct) {
-      return `<strong>"${word}"</strong> could go either way — out of every 100 spam emails, ${spamPct} use it. There are ${hamPct} normal emails out of 100 that use this word. Doesn't tell me much. Suspicion stays around <strong>${(nowPct*100).toFixed(0)}%</strong>.`;
+      return `<strong>"${word}"</strong> is a neutral word. Out of every 100 spam emails, ${spamPct} use it. There are ${hamPct} normal emails out of 100 that use this word. Suspicion stays around <strong>${(nowPct*100).toFixed(0)}%</strong>.`;
     }
 
     let html = `<div class="thought-bubble neutral">
-      Alright, a new email just came in. Before I even read it, I already have a rough idea — based on everything I've seen before, about <strong>40% of emails turn out to be spam</strong> and 60% are normal. So I'll start there and update my suspicion as I read each word.
+      About <strong>40% of emails turn out to be spam</strong> and 60% are normal. So I'll start there and update my suspicion as I read each word.
       ${miniBar(0.40)}
     </div>`;
 
