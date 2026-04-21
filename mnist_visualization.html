@@ -1,0 +1,321 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Courier New', monospace; font-size: 16px; }
+
+body.dark  { background: #0a0a0f; color: #c8d0e0; }
+body.light { background: #f0f2f5; color: #1a2535; }
+
+#topbar { font-size: 16px; padding: 8px 14px; border-bottom: 1px solid; letter-spacing: 2px; display: flex; justify-content: space-between; align-items: center; }
+body.dark  #topbar { color: #4a6a8a; border-color: #1a2030; }
+body.light #topbar { color: #3a5878; border-color: #c0ccd8; }
+
+#mode-btn { font-family: 'Courier New', monospace; font-size: 16px; padding: 4px 12px; cursor: pointer; border-radius: 4px; border: 1px solid; }
+body.dark  #mode-btn { background: #0d1825; border-color: #1e3048; color: #607080; }
+body.light #mode-btn { background: #e0e8f0; border-color: #a0b8cc; color: #3a5878; }
+#mode-btn:hover { opacity: 0.8; }
+
+#layout { display: flex; height: calc(100vh - 45px); }
+
+#sidebar { width: 230px; min-width: 230px; border-right: 1px solid; padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+body.dark  #sidebar { border-color: #1a2030; }
+body.light #sidebar { border-color: #c0ccd8; }
+
+.slabel { font-size: 16px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+body.dark  .slabel { color: #3a5878; }
+body.light .slabel { color: #5a7898; }
+
+#drawCanvas { display: block; cursor: crosshair; border: 1px solid; }
+body.dark  #drawCanvas { border-color: #1e3048; background: #040608; }
+body.light #drawCanvas { border-color: #a0b8cc; background: #ffffff; }
+
+#miniCanvas { display: block; border: 1px solid; image-rendering: pixelated; width: 200px; height: 200px; }
+body.dark  #miniCanvas { border-color: #1e3048; background: #040608; }
+body.light #miniCanvas { border-color: #a0b8cc; background: #ffffff; }
+
+.btn-row { display: flex; gap: 6px; }
+button.ctrl { font-family: 'Courier New', monospace; font-size: 16px; padding: 6px 8px; cursor: pointer; text-transform: uppercase; flex: 1; border: 1px solid; }
+body.dark  button.ctrl { background: #0d1825; border-color: #1e3048; color: #607080; }
+body.light button.ctrl { background: #e0e8f0; border-color: #a0b8cc; color: #3a5878; }
+button.ctrl:hover { opacity: 0.8; }
+
+.guess-line { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.gl { font-size: 16px; }
+body.dark  .gl { color: #3a5878; }
+body.light .gl { color: #5a7898; }
+.gv { font-size: 26px; font-weight: bold; line-height: 1; }
+body.dark  .gv { color: #40aaff; }
+body.light .gv { color: #1a6abf; }
+
+.prob-row { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
+.pd { font-size: 16px; width: 16px; }
+body.dark  .pd { color: #3a5878; }
+body.light .pd { color: #5a7898; }
+.pb { flex: 1; height: 8px; }
+body.dark  .pb { background: #0d1825; }
+body.light .pb { background: #c8d8e8; }
+.pf { height: 100%; transition: width 0.2s; }
+body.dark  .pf     { background: #1e3870; }
+body.light .pf     { background: #90b8d8; }
+body.dark  .pf.hi  { background: #2880e0; }
+body.light .pf.hi  { background: #1a6abf; }
+.pp { font-size: 16px; width: 46px; text-align: right; }
+body.dark  .pp { color: #3a5878; }
+body.light .pp { color: #5a7898; }
+
+#vizwrap { flex: 1; overflow: auto; }
+#layer-canvas { display: block; }
+
+#tooltip { position: fixed; border: 1px solid; padding: 6px 10px; font-size: 16px; pointer-events: none; display: none; z-index: 100; line-height: 1.5; }
+body.dark  #tooltip { background: #0d1825; border-color: #1e3870; color: #80a0c0; }
+body.light #tooltip { background: #e8f0f8; border-color: #90b8d8; color: #2a4868; }
+</style>
+
+<div id="topbar">
+  MNIST Example Visualization
+  <button id="mode-btn">☀ Light</button>
+</div>
+<div id="layout">
+  <div id="sidebar">
+    <div>
+      <div class="slabel">Draw a number here (0–9)</div>
+      <canvas id="drawCanvas" width="200" height="200"></canvas>
+    </div>
+    <div>
+      <div class="slabel">28×28 input</div>
+      <canvas id="miniCanvas" width="28" height="28"></canvas>
+    </div>
+    <div class="btn-row">
+      <button class="ctrl" id="clearBtn">Clear</button>
+      <button class="ctrl" id="randBtn">Random</button>
+    </div>
+    <div>
+      <div class="slabel">Predictions</div>
+      <div id="guesses"></div>
+    </div>
+    <div>
+      <div class="slabel">Probabilities</div>
+      <div id="probs"></div>
+    </div>
+  </div>
+  <div id="vizwrap">
+    <canvas id="layer-canvas"></canvas>
+  </div>
+</div>
+<div id="tooltip"></div>
+
+<script>
+// ── Theme ─────────────────────────────────────────────────────────────────────
+let isDark = true;
+document.body.className = 'dark';
+document.getElementById('mode-btn').addEventListener('click', () => {
+  isDark = !isDark;
+  document.body.className = isDark ? 'dark' : 'light';
+  document.getElementById('mode-btn').textContent = isDark ? '☀ Light' : '☾ Dark';
+  // Redraw canvas backgrounds
+  const dcBg = isDark ? '#040608' : '#ffffff';
+  dctx.fillStyle = dcBg; dctx.fillRect(0,0,200,200);
+  if (lastAct) render(lastAct);
+});
+
+// ── Network ───────────────────────────────────────────────────────────────────
+function makePRNG(seed) { let s=seed; return ()=>{s^=s<<13;s^=s>>>17;s^=s<<5;return(s>>>0)/4294967296;}; }
+function initWeights(inN,outN,rng){const limit=Math.sqrt(2.0/inN),W=new Float32Array(outN*inN),b=new Float32Array(outN);for(let i=0;i<W.length;i++)W[i]=(rng()-0.5)*2*limit;return{W,b,inN,outN};}
+const rng=makePRNG(0x1A2B3C4D);
+const NET=[initWeights(784,256,rng),initWeights(256,128,rng),initWeights(128,10,rng)];
+const relu=x=>Math.max(0,x);
+function softmax(a){const m=Math.max(...a),e=a.map(x=>Math.exp(x-m)),s=e.reduce((a,b)=>a+b,0);return e.map(x=>x/s);}
+function forward(inp){
+  let x=inp;const acts=[Array.from(inp)];
+  for(let i=0;i<NET.length;i++){
+    const{W,b,inN,outN}=NET[i];const out=new Float32Array(outN);
+    for(let j=0;j<outN;j++){let v=b[j];for(let k=0;k<inN;k++)v+=W[j*inN+k]*x[k];out[j]=i<NET.length-1?relu(v):v;}
+    x=out;acts.push(Array.from(i<NET.length-1?x:softmax(x)));
+  }
+  return acts;
+}
+
+// ── Draw canvas ───────────────────────────────────────────────────────────────
+const dc=document.getElementById('drawCanvas'),dctx=dc.getContext('2d');
+dctx.fillStyle='#040608';dctx.fillRect(0,0,200,200);
+dctx.strokeStyle='#000';dctx.lineWidth=14;dctx.lineCap='round';dctx.lineJoin='round';
+
+function getDrawColor(){return isDark?'#ffffff':'#111111';}
+let drawing=false,lx=0,ly=0;
+const gp=e=>{const r=dc.getBoundingClientRect();return[(e.clientX-r.left)*200/r.width,(e.clientY-r.top)*200/r.height];};
+dc.addEventListener('mousedown',e=>{drawing=true;[lx,ly]=gp(e);});
+dc.addEventListener('mousemove',e=>{if(!drawing)return;const[x,y]=gp(e);dctx.strokeStyle=getDrawColor();dctx.beginPath();dctx.moveTo(lx,ly);dctx.lineTo(x,y);dctx.stroke();[lx,ly]=[x,y];runNet();});
+dc.addEventListener('mouseup',()=>drawing=false);
+dc.addEventListener('mouseleave',()=>drawing=false);
+dc.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const t=e.touches[0];const r=dc.getBoundingClientRect();[lx,ly]=[(t.clientX-r.left)*200/r.width,(t.clientY-r.top)*200/r.height];},{passive:false});
+dc.addEventListener('touchmove',e=>{e.preventDefault();if(!drawing)return;const t=e.touches[0];const r=dc.getBoundingClientRect();const x=(t.clientX-r.left)*200/r.width,y=(t.clientY-r.top)*200/r.height;dctx.strokeStyle=getDrawColor();dctx.beginPath();dctx.moveTo(lx,ly);dctx.lineTo(x,y);dctx.stroke();[lx,ly]=[x,y];runNet();},{passive:false});
+dc.addEventListener('touchend',()=>drawing=false);
+
+const mc=document.getElementById('miniCanvas'),mctx=mc.getContext('2d');
+function getInp(){const t=document.createElement('canvas');t.width=28;t.height=28;const tc=t.getContext('2d');if(!isDark){tc.fillStyle='#fff';tc.fillRect(0,0,28,28);}tc.drawImage(dc,0,0,28,28);const d=tc.getImageData(0,0,28,28).data;const arr=new Float32Array(784);for(let i=0;i<784;i++)arr[i]=isDark?d[i*4]/255:(255-d[i*4])/255;return arr;}
+function drawMini(inp){const id=mctx.createImageData(28,28);for(let i=0;i<784;i++){const v=Math.round(inp[i]*255);id.data[i*4]=v;id.data[i*4+1]=v;id.data[i*4+2]=v;id.data[i*4+3]=255;}mctx.putImageData(id,0,0);}
+
+// ── Visualization ─────────────────────────────────────────────────────────────
+const lc=document.getElementById('layer-canvas'),lctx=lc.getContext('2d');
+const NAMES=['Input','H1','H2','Output'];
+let lastAct=null,rects=[];
+
+function cmapDark(v,mn,mx){
+  if(mx===mn)return[5,15,40];
+  const t=Math.max(0,Math.min(1,(v-mn)/(mx-mn)));
+  return[Math.round(t<0.5?t*2*30:30+(t-0.5)*2*195),Math.round(t<0.5?t*2*100:100+(t-0.5)*2*155),Math.round(t<0.5?60+t*2*140:200+(t-0.5)*2*55)];
+}
+function cmapLight(v,mn,mx){
+  if(mx===mn)return[220,232,245];
+  const t=Math.max(0,Math.min(1,(v-mn)/(mx-mn)));
+  // white → deep blue
+  return[Math.round(245-t*195),Math.round(245-t*145),Math.round(245-t*80)];
+}
+function cmap(v,mn,mx){return isDark?cmapDark(v,mn,mx):cmapLight(v,mn,mx);}
+
+function render(acts){
+  lastAct=acts; rects=[];
+  const wrap=document.getElementById('vizwrap');
+  const wrapW=wrap.clientWidth||800;
+  const wrapH=wrap.clientHeight||500;
+
+  const PAD=16, GAP=60, LH=32, DIVIDER=2;
+  const availH=Math.min(520,wrapH-PAD*2-LH-10);
+
+  // Fixed widths for each column
+  const INP_W=availH;   // square image
+  const FC1_W=36;
+  const FC2_W=36;
+  const OUT_W=180;
+
+  // Total canvas width — columns + gaps + padding
+  const totalW=PAD + INP_W + GAP + FC1_W + GAP + FC2_W + GAP + OUT_W + PAD;
+  lc.width=Math.max(totalW, wrapW);
+  lc.height=PAD+LH+availH+PAD;
+
+  const bg=isDark?'#0a0a0f':'#f0f2f5';
+  const dividerCol=isDark?'#1e3048':'#b0c4d8';
+  const labelCol=isDark?'#2a4868':'#4a6888';
+  const borderCol=isDark?'#1a2840':'#90aac0';
+
+  lctx.fillStyle=bg; lctx.fillRect(0,0,lc.width,lc.height);
+
+  const baseY=PAD+LH;
+
+  // Draw column separators (subtle vertical lines between columns)
+  const colStarts=[
+    PAD,
+    PAD+INP_W+GAP,
+    PAD+INP_W+GAP+FC1_W+GAP,
+    PAD+INP_W+GAP+FC1_W+GAP+FC2_W+GAP
+  ];
+  const colWidths=[INP_W, FC1_W, FC2_W, OUT_W];
+
+  // Draw column background panels
+  colStarts.forEach((x,i)=>{
+    const panelBg=isDark
+      ?['#0d1520','#0d1520','#0d1520','#0d1520'][i]
+      :['#e8f0f8','#e8f0f8','#e8f0f8','#e8f0f8'][i];
+    lctx.fillStyle=panelBg;
+    lctx.fillRect(x-4, PAD, colWidths[i]+8, LH+availH+4);
+    lctx.strokeStyle=dividerCol;
+    lctx.lineWidth=1;
+    lctx.strokeRect(x-4, PAD, colWidths[i]+8, LH+availH+4);
+  });
+
+  function colLabel(txt,x,w){
+    lctx.fillStyle=labelCol;
+    lctx.font='16px "Courier New"';
+    lctx.textAlign='center';
+    lctx.fillText(txt,x+w/2,PAD+LH-7);
+    lctx.textAlign='left';
+  }
+
+  // ── Input ──
+  colLabel(NAMES[0], colStarts[0], INP_W);
+  const inp=acts[0];
+  const imgId=lctx.createImageData(28,28);
+  for(let i=0;i<784;i++){const[r,g,b]=cmap(inp[i],0,1);imgId.data[i*4]=r;imgId.data[i*4+1]=g;imgId.data[i*4+2]=b;imgId.data[i*4+3]=255;}
+  const tmp=document.createElement('canvas');tmp.width=28;tmp.height=28;tmp.getContext('2d').putImageData(imgId,0,0);
+  lctx.imageSmoothingEnabled=false;
+  lctx.drawImage(tmp,colStarts[0],baseY,INP_W,availH);
+  lctx.strokeStyle=borderCol;lctx.lineWidth=0.5;lctx.strokeRect(colStarts[0],baseY,INP_W,availH);
+  rects.push({x:colStarts[0],y:baseY,w:INP_W,h:availH,name:'Input (784 pixels)',detail:'Pixel intensities 0–1'});
+
+  // ── Hidden 1 ──
+  colLabel(NAMES[1], colStarts[1], FC1_W);
+  const h1=acts[1], mn1=Math.min(...h1), mx1=Math.max(...h1);
+  const bh1=availH/h1.length;
+  h1.forEach((v,i)=>{const[r,g,b]=cmap(v,mn1,mx1);lctx.fillStyle=`rgb(${r},${g},${b})`;lctx.fillRect(colStarts[1],baseY+i*bh1,FC1_W,Math.max(0.5,bh1-0.3));});
+  rects.push({x:colStarts[1],y:baseY,w:FC1_W,h:availH,name:NAMES[1],detail:`min:${mn1.toFixed(3)} max:${mx1.toFixed(3)}`});
+
+  // ── Hidden 2 ──
+  colLabel(NAMES[2], colStarts[2], FC2_W);
+  const h2=acts[2], mn2=Math.min(...h2), mx2=Math.max(...h2);
+  const bh2=availH/h2.length;
+  h2.forEach((v,i)=>{const[r,g,b]=cmap(v,mn2,mx2);lctx.fillStyle=`rgb(${r},${g},${b})`;lctx.fillRect(colStarts[2],baseY+i*bh2,FC2_W,Math.max(0.5,bh2-0.3));});
+  rects.push({x:colStarts[2],y:baseY,w:FC2_W,h:availH,name:NAMES[2],detail:`min:${mn2.toFixed(3)} max:${mx2.toFixed(3)}`});
+
+  // ── Output ──
+  colLabel(NAMES[3], colStarts[3], OUT_W);
+  const out=acts[3], maxP=Math.max(...out);
+  const bh3=availH/10;
+  out.forEach((p,i)=>{
+    const by=baseY+i*bh3;
+    const maxBarW=OUT_W-52;
+    const bw=Math.round(p*maxBarW);
+    const[r,g,b]=cmap(p,0,maxP);
+    lctx.fillStyle=`rgb(${r},${g},${b})`;
+    lctx.fillRect(colStarts[3]+28,by+2,bw,bh3-6);
+    lctx.fillStyle=p===maxP?(isDark?'#60d0ff':'#0050b0'):(isDark?'#3a5878':'#6a8898');
+    lctx.font=p===maxP?'bold 16px "Courier New"':'16px "Courier New"';
+    lctx.textAlign='right';
+    lctx.fillText(i,colStarts[3]+23,by+bh3*0.68);
+    lctx.fillStyle=isDark?'#304060':'#6a8898';
+    lctx.font='16px "Courier New"';
+    lctx.textAlign='left';
+    lctx.fillText((p*100).toFixed(1)+'%',colStarts[3]+32+bw,by+bh3*0.68);
+    rects.push({x:colStarts[3],y:by,w:OUT_W,h:bh3,name:`Output: digit ${i}`,detail:`${(p*100).toFixed(2)}%`});
+  });
+  lctx.textAlign='left';
+}
+
+// ── Tooltip ───────────────────────────────────────────────────────────────────
+lc.addEventListener('mousemove',e=>{
+  if(!lastAct)return;
+  const r=lc.getBoundingClientRect();
+  const mx=(e.clientX-r.left)*(lc.width/r.width),my=(e.clientY-r.top)*(lc.height/r.height);
+  const tt=document.getElementById('tooltip');
+  for(const lr of rects){if(mx>=lr.x&&mx<lr.x+lr.w&&my>=lr.y&&my<lr.y+lr.h){tt.style.display='block';tt.style.left=(e.clientX+12)+'px';tt.style.top=(e.clientY-8)+'px';tt.innerHTML=`<b>${lr.name}</b><br>${lr.detail}`;return;}}
+  tt.style.display='none';
+});
+lc.addEventListener('mouseleave',()=>document.getElementById('tooltip').style.display='none');
+
+// ── UI ────────────────────────────────────────────────────────────────────────
+function updateUI(probs){
+  const sorted=[...probs.map((p,i)=>({p,i}))].sort((a,b)=>b.p-a.p);
+  const gl=document.getElementById('guesses');gl.innerHTML='';
+  ['1st guess','2nd guess'].forEach((lbl,k)=>{const g=sorted[k];gl.innerHTML+=`<div class="guess-line"><span class="gl">${lbl}</span><span class="gv">${g.i}</span></div>`;});
+  const pb=document.getElementById('probs');pb.innerHTML='';
+  const maxP=Math.max(...probs);
+  probs.forEach((p,i)=>{pb.innerHTML+=`<div class="prob-row"><span class="pd">${i}</span><div class="pb"><div class="pf${p===maxP?' hi':''}" style="width:${p*100}%"></div></div><span class="pp">${(p*100).toFixed(1)}%</span></div>`;});
+}
+
+function runNet(){const inp=getInp();drawMini(inp);const acts=forward(inp);render(acts);updateUI(acts[acts.length-1]);}
+
+function drawRandom(){
+  const dcBg=isDark?'#040608':'#ffffff';
+  dctx.fillStyle=dcBg;dctx.fillRect(0,0,200,200);
+  const d=Math.floor(Math.random()*10);
+  dctx.fillStyle=isDark?'#fff':'#111';
+  dctx.font='bold 150px monospace';
+  dctx.textAlign='center';dctx.textBaseline='middle';
+  dctx.fillText(d,100,105);
+  runNet();
+}
+
+document.getElementById('clearBtn').addEventListener('click',()=>{const dcBg=isDark?'#040608':'#ffffff';dctx.fillStyle=dcBg;dctx.fillRect(0,0,200,200);runNet();});
+document.getElementById('randBtn').addEventListener('click',drawRandom);
+window.addEventListener('resize',()=>{if(lastAct)render(lastAct);});
+drawRandom();
+</script>

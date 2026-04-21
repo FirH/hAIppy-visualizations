@@ -557,7 +557,7 @@ td input:focus{outline:none;border-color:#534AB7}
           const w=weights[destL-1][o][i], contrib=w*prev[i];
           const fromName=destL===1?`x${i+1}`:`h${destL-1}.${i+1}`;
           const wName=`w${i+1}.${o+1}`;
-          lines.push(`${fromName} (${f2(prev[i])}) × ${wName} (${f2(w)}) = ${f2(contrib)}`);
+          lines.push(`${fromName} (${f2(prev[i])}) \u00D7 ${wName} (${f2(w)}) = ${f2(contrib)}`);
         }
         lines.push(`bias = ${f2(biases[destL-1][o])}`);
         const z=zs[destL][o];
@@ -565,7 +565,7 @@ td input:focus{outline:none;border-color:#534AB7}
         lines.push(`z = ${f2(biases[destL-1][o])} + ${f2(weightedSum)} = ${f2(z)}`);
         const a=acts[destL][o];
         const isDead=a===0;
-        lines.push(`${fn}(${f2(z)}) = ${f2(a)}${isDead?' ✕':''}`);
+        lines.push(`${fn}(${f2(z)}) = ${f2(a)}${isDead?'':''}`);
         drawNeuronPopup(x,y,isDead?COL.dead:col,alpha,lines,isDead);
       }
 
